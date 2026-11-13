@@ -75,8 +75,17 @@ final class Api
             $r === 'import' && ($seg[1] ?? '') === 'markdown' && $m === 'POST' => $this->importMarkdown(),
             $r === 'users' && $n === 1 && $m === 'GET' => $this->json($this->isAdmin() ? $this->pod->all('SELECT id, username, role, created_at, last_login, totp_enabled FROM _users ORDER BY created_at') : []),
             $r === 'account' && ($seg[1] ?? '') === 'password' => $this->changePassword(),
+            $r === 'account' && ($seg[1] ?? '') === 'sessions' => $this->sessions($m, $seg[2] ?? null),
+            $r === 'account' && ($seg[1] ?? '') === '2fa' => $this->json(['enabled' => false, 'recoveryLeft' => 0]),
+            $r === 'api-keys' => $this->json(['keys' => []]),
+            $r === 'webhooks' => $this->json(['hooks' => [], 'log' => []]),
+            $r === 'templates' => $this->json([]),
+            $r === 'search' && ($seg[1] ?? '') === 'recent' => $this->recent(),
+            $r === 'search' && ($seg[1] ?? '') === 'calendar' => $this->json([]),
             $r === 'search' => $this->search(),
             $r === 'locks' => $this->json(['ok' => true, 'locked' => false]),
+            $r === 'quality' => $this->json(['total' => 0, 'byType' => new stdClass(), 'issues' => []]),
+            $r === 'security-check' => $this->json(['findings' => []]),
             $r === 'build' => $this->json(['available' => false, 'status' => 'idle']),
             default => $this->json(['error' => 'Not available in Lander'], 501),
         };
@@ -128,6 +137,19 @@ final class Api
         $this->json(['ok' => true]);
     }
 
+    /** Eigene Sitzungen anzeigen und andere Geräte abmelden (wie Orbiter: id = Hash des Tokens, nie das Token selbst). */
+    private function sessions(string $m, ?string $id): void
+    {
+        $cur = $_COOKIE['orb_sess'] ?? '';
+        $rows = $this->pod->all("SELECT token, ip, ua, created_at, expires_at FROM _sessions WHERE user_id = ? AND expires_at > datetime('now') ORDER BY created_at DESC", [$this->user['id']]);
+        $sid = fn(string $t) => substr(hash('sha256', $t), 0, 16);
+        if ($m === 'DELETE' && $id !== null) {
+            foreach ($rows as $r) if ($sid($r['token']) === $id && $r['token'] !== $cur) $this->pod->run('DELETE FROM _sessions WHERE token = ?', [$r['token']]);
+            $this->json(['ok' => true]); return;
+        }
+        $this->json(array_map(fn($r) => ['id' => $sid($r['token']), 'current' => $r['token'] === $cur, 'ip' => $r['ip'], 'ua' => $r['ua'], 'created_at' => $r['created_at'], 'expires_at' => $r['expires_at']], $rows));
+    }
+
     // ───────────────────────── info, meta ─────────────────────────
     private function info(): void
     {
@@ -142,6 +164,8 @@ final class Api
         ], $this->pod->collections());
         $hidden = $this->pod->getMeta('nav.hidden') ?? '';
         $this->json([
+            'podPath' => basename($this->cfg['pod']),   // nur Dateiname, kein Serverpfad (das Dock liest ihn)
+            'siteName' => $this->pod->getMeta('site.name'),
             'podSize' => @filesize($this->cfg['pod']) ?: 0,
             'formatVersion' => $this->pod->getMeta('format_version') ?? '1',
             'adminVersion' => 'lander-0.1.0',
@@ -418,6 +442,21 @@ final class Api
     }
 
     // ───────────────────────── search ─────────────────────────
+    private function recent(): void
+    {
+        $limit = max(1, min((int)($_GET['limit'] ?? 10), 50));
+        $st = $_GET['status'] ?? null;
+        $labels = array_column($this->pod->collections(), 'label', 'id');
+        $rows = $st
+            ? $this->pod->all("SELECT * FROM _entries WHERE status = ? AND deleted_at IS NULL ORDER BY updated_at DESC LIMIT $limit", [$st])
+            : $this->pod->all("SELECT * FROM _entries WHERE deleted_at IS NULL ORDER BY updated_at DESC LIMIT $limit");
+        $this->json(array_map(function ($r) use ($labels) {
+            $d = json_decode($r['data'], true) ?: [];
+            return ['collection' => $r['collection_id'], 'label' => $labels[$r['collection_id']] ?? $r['collection_id'], 'slug' => $r['slug'],
+                'title' => $d['title'] ?? $r['slug'], 'status' => $r['status'], 'updated_at' => $r['updated_at']];
+        }, $rows));
+    }
+
     private function search(): void
     {
         $q = trim((string)($_GET['q'] ?? ''));

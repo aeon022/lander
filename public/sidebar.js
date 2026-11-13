@@ -4,7 +4,7 @@
  * Also bootstraps xfce.js when orb_style === 'xfce'.
  */
 ;(function () {
-  if (localStorage.getItem('orb_style') === 'xfce') {
+  if ((localStorage.getItem('orb_style') || 'xfce') === 'xfce') {  // Lander: Station-Modus als Standard
     var xs = document.createElement('script');
     xs.src = '/xfce.js';
     var cs = document.currentScript;

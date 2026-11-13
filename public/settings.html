@@ -330,7 +330,7 @@
     const ghConfigured   = !!(get('github.token') && get('github.repo'));
     const currentTheme  = localStorage.getItem('orb_theme') || get('ui.theme') || 'space'; // what is actually applied
     const currentScheme = localStorage.getItem('orb_scheme') || 'auto';
-    const currentStyle  = localStorage.getItem('orb_style')  || 'glass'; // same default as theme.js
+    const currentStyle  = localStorage.getItem('orb_style')  || 'xfce'; // Lander: same default as theme.js
 
     const wrap = document.getElementById('settings-content');
     wrap.innerHTML = `
@@ -1214,7 +1214,7 @@
     document.querySelectorAll('.style-card').forEach(btn => {
       btn.addEventListener('click', () => {
         const s = btn.dataset.style;
-        const wasXfce = (localStorage.getItem('orb_style') || 'glass') === 'xfce';
+        const wasXfce = (localStorage.getItem('orb_style') || 'xfce') === 'xfce'; // Lander
         document.querySelectorAll('.style-card').forEach(b => b.classList.toggle('active', b.dataset.style === s));
         const root = document.documentElement;
         root.removeAttribute('data-style');
