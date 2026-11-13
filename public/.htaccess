@@ -14,6 +14,10 @@ RewriteRule ^([a-z-]+)$ $1.html [L]
   Require all denied
 </FilesMatch>
 <IfModule mod_headers.c>
+  # Oberfläche immer frisch prüfen (ETag), sonst passen nach Updates alte und neue Skripte nicht zusammen
+  <FilesMatch "\.(html|js|css)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
   Header always set X-Content-Type-Options "nosniff"
   Header always set X-Frame-Options "DENY"
   Header always set Referrer-Policy "same-origin"
