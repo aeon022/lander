@@ -1,0 +1,6 @@
+lander.config.php
+data/*
+!data/.htaccess
+public/media/*
+!public/media/.htaccess
+.DS_Store

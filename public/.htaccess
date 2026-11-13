@@ -1,0 +1,19 @@
+# Lander: Admin-Oberfläche statisch, /api/* an index.php
+Options -Indexes
+DirectoryIndex index.php
+RewriteEngine On
+RewriteRule ^$ /login.html [R=302,L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^api/ index.php [L,QSA]
+# Kurz-URLs wie in Orbiter (/dashboard → /dashboard.html)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME}.html -f
+RewriteRule ^([a-z-]+)$ $1.html [L]
+<FilesMatch "\.(pod|sqlite|db|json\.bak|md)$">
+  Require all denied
+</FilesMatch>
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "DENY"
+  Header always set Referrer-Policy "same-origin"
+</IfModule>

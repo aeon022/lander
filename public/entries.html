@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orbiter Admin — Entries</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Space+Grotesk:wght@300;400;500;600&family=Noto+Serif+JP:wght@200;300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css" />
+  <script src="/theme.js"></script>
+  <style>
+    .bulk-bar {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      background: var(--accent-bg);
+      border: 1px solid rgba(139,124,248,.2);
+      border-radius: var(--radius);
+      margin-bottom: 12px;
+      font-size: 12px;
+      color: var(--text);
+    }
+    .bulk-bar.visible { display: flex; }
+    .bulk-bar-count { color: var(--accent); font-family: var(--mono); margin-right: 4px; }
+    .bulk-bar-spacer { flex: 1; }
+    .cb-col { width: 32px; padding-left: 16px !important; }
+    input[type=checkbox] { accent-color: var(--accent); width: 13px; height: 13px; cursor: pointer; }
+    /* row action buttons */
+    .row-actions { display:flex; gap:4px; justify-content:flex-end; align-items:center; }
+    .btn-row { display:inline-flex; align-items:center; justify-content:center; height:24px; padding:0 10px; font-size:10px; font-family:var(--mono); border-radius:4px; border:1px solid var(--line); background:none; color:var(--mid); cursor:pointer; transition:all 0.12s; text-decoration:none; letter-spacing:0; white-space:nowrap; line-height:1; }
+    .btn-row:hover { color:var(--heading); border-color:var(--mid); background:var(--hover-bg); }
+    .btn-row-toggle { min-width:80px; }
+    .btn-row-icon { padding:0; width:24px; font-size:12px; }
+    .btn-row-danger { color:var(--red); border-color:transparent; background:none; }
+    .btn-row-danger:hover { background:var(--red-bg); border-color:var(--red); }
+    /* filter tabs */
+    .filter-tab { display:inline-flex; align-items:center; padding:3px 11px; font-size:10px; font-family:var(--mono); border-radius:20px; border:1px solid var(--line); background:none; color:var(--muted); cursor:pointer; transition:all 0.12s; }
+    .filter-tab:hover { color:var(--text); border-color:var(--mid); }
+    .filter-tab.active { background:var(--accent-bg); color:var(--accent); border-color:var(--accent); }
+    .drag-col { width:24px; padding:0 4px !important; text-align:center; }
+    .drag-handle { color:var(--line); cursor:grab; font-size:13px; line-height:1; user-select:none; display:block; padding:4px 2px; }
+    .drag-handle:hover { color:var(--muted); }
+    tr.drag-over td { border-top:2px solid var(--accent); }
+    tr[draggable="true"] { transition:opacity .15s; }
+    tr.dragging { opacity:.4; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <a class="logo" href="/dashboard.html"><div class="logo-mark">OR</div>Orbiter</a>
+      <div class="topbar-right">
+        <button class="search-trigger" id="search-btn" title="Search (⌘K)">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          Search <kbd>⌘K</kbd>
+        </button>
+        <button class="scheme-toggle" id="scheme-toggle" title="Toggle scheme">◐</button>
+        <span class="user" id="topbar-user"></span>
+        <span class="logout" id="logout-btn">Sign out</span>
+      </div>
+    </header>
+    <nav class="sidebar">
+      <div class="nav-section">Content</div>
+      <a class="nav-item" href="/dashboard.html"><span class="nav-icon">◈</span>Dashboard</a>
+      <a class="nav-item active" href="/collections.html"><span class="nav-icon">⊞</span>Collections</a>
+      <div class="nav-section">Assets</div>
+      <a class="nav-item" href="/media.html"><span class="nav-icon">⊟</span>Media</a>
+      <div class="nav-section">Tools</div>
+      <a class="nav-item" href="/inbox.html"><span class="nav-icon">✉</span>Inbox</a>
+      <a class="nav-item" href="/snippets.html"><span class="nav-icon">⌗</span>Snippets</a>
+
+      <div class="nav-section">System</div>
+      <a class="nav-item" href="/schema.html"><span class="nav-icon">◈</span>Schema</a>
+      <a class="nav-item" href="/build.html"><span class="nav-icon">▲</span>Build</a>
+      <a class="nav-item" href="/settings.html"><span class="nav-icon">◎</span>Settings</a>
+      <a class="nav-item admin-only" href="/users.html" style="display:none"><span class="nav-icon">◉</span>Users</a>
+            <a class="nav-item admin-only" href="/pods.html" style="display:none"><span class="nav-icon">◈</span>Pods</a>
+      <div class="sidebar-footer">
+        <div class="pod-name" id="pod-name">content.pod</div>
+        <div class="pod-info" id="pod-info"></div>
+        <div class="pod-version" id="pod-version"></div>
+        <div class="pod-status"><span class="pod-dot"></span>pod synced</div>
+      </div>
+    </nav>
+    <main class="main">
+      <div class="page-header glass-card" style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px">
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">
+            <a href="/collections.html" style="color:var(--muted)">Collections</a>
+            <span style="margin:0 6px;color:var(--line)">/</span>
+            <span id="col-label" style="color:var(--mid)"></span>
+          </div>
+          <h1 class="page-title" id="page-title">Entries</h1>
+          <p class="page-sub" id="page-sub"></p>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;margin-top:4px">
+          <a id="export-btn" href="#" class="btn btn-ghost btn-sm" title="Export as CSV">↓ CSV</a>
+          <label class="btn btn-ghost btn-sm" style="cursor:pointer" title="Import from CSV">↑ CSV<input type="file" id="import-file" accept=".csv" style="display:none" /></label>
+          <div style="position:relative">
+            <button class="btn btn-ghost btn-sm" id="tpl-btn" title="Create from template">⌗</button>
+            <div id="tpl-menu" style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:var(--bg2);border:1px solid var(--line);border-radius:var(--radius);min-width:200px;z-index:50;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.12);">
+              <div id="tpl-menu-inner" style="padding:4px 0;font-size:11px;"></div>
+            </div>
+          </div>
+          <button class="btn btn-primary" id="new-btn">+ New entry</button>
+        </div>
+      </div>
+
+      <!-- Filter + table glass card -->
+      <div class="glass-card entries-content-card">
+        <!-- Filter bar -->
+        <div class="entries-filter-bar" style="display:flex;gap:6px">
+          <button class="filter-tab active" data-status="">All</button>
+          <button class="filter-tab" data-status="published">Published</button>
+          <button class="filter-tab" data-status="draft">Drafts</button>
+          <button class="filter-tab" data-status="in_review">In review</button>
+          <button class="filter-tab" data-status="scheduled">Scheduled</button>
+          <button class="filter-tab" data-status="trash" style="margin-left:auto">🗑 Trash</button>
+        </div>
+
+        <!-- Bulk action bar -->
+        <div class="bulk-bar" id="bulk-bar">
+          <span><span class="bulk-bar-count" id="bulk-count">0</span> selected</span>
+          <button class="btn btn-ghost btn-sm bulk-normal" id="bulk-publish">Publish</button>
+          <button class="btn btn-ghost btn-sm bulk-normal" id="bulk-draft">Unpublish</button>
+          <button class="btn btn-ghost btn-sm bulk-trash" id="bulk-restore" style="display:none">Restore</button>
+          <button class="btn btn-ghost btn-sm bulk-normal" id="bulk-ai" style="color:var(--accent);border-color:var(--accent)">✦ AI Summarize</button>
+          <span class="bulk-bar-spacer"></span>
+          <button class="btn btn-danger btn-sm bulk-normal" id="bulk-delete">Move to Trash</button>
+          <button class="btn btn-danger btn-sm bulk-trash" id="bulk-permanent" style="display:none">Delete forever</button>
+        </div>
+
+        <div class="table-wrap" id="entries-wrap">
+          <div class="empty"><div class="spinner"></div></div>
+        </div>
+      </div>
+    
+  <script type="module">
+    const params   = new URLSearchParams(location.search);
+    const colId    = params.get('col') ?? '';
+    const colLabel = decodeURIComponent(params.get('label') ?? colId);
+
+    function relativeTime(dateStr) {
+      const d = new Date(dateStr.replace(' ', 'T') + 'Z');
+      const diff = (Date.now() - d.getTime()) / 1000;
+      if (diff < 60) return 'just now';
+      if (diff < 3600) return Math.floor(diff/60) + ' min ago';
+      if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+      if (diff < 604800) return Math.floor(diff/86400) + 'd ago';
+      return dateStr.split(' ')[0];
+    }
+    const me = await fetch('/api/auth/me', { credentials: 'include' }).then(r => r.json()).catch(() => null);
+    if (!me?.user) { location.replace('/login.html'); throw new Error('unauthenticated'); }
+    document.getElementById('topbar-user').textContent = me.user.username;
+    // Review workflow: editors submit for review instead of publishing
+    const reviewOn   = (await fetch('/api/meta/workflow~review',{credentials:'include'}).then(r=>r.json()).catch(()=>null))?.value === '1';
+    const canPublish = !reviewOn || me.user.role !== 'editor';
+    if (me.user.role === 'admin') {
+      document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
+    }
+    document.getElementById('logout-btn').addEventListener('click', async () => {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      location.replace('/login.html');
+    });
+
+    document.getElementById('col-label').textContent  = colLabel;
+    document.getElementById('page-title').textContent = colLabel;
+
+    // Load site locales to build locale filter tabs
+    const siteLocalesMeta = await fetch('/api/meta/site~locales',{credentials:'include'}).then(r=>r.ok?r.json():null).catch(()=>null);
+    const siteLocales = (siteLocalesMeta?.value ?? '').split(',').map(s => s.trim()).filter(Boolean);
+
+    let allEntries   = [];
+    let activeFilter = '';
+    let activeLocale = '';  // '' = default/primary locale
+    let selected     = new Set();
+    let sortField    = 'updated_at';
+    let sortDir      = -1; // -1 = desc, 1 = asc
+
+    function sortEntries(entries) {
+      return [...entries].sort((a, b) => {
+        let av, bv;
+        if (sortField === 'title') {
+          av = (a.data?.title || a.slug || '').toLowerCase();
+          bv = (b.data?.title || b.slug || '').toLowerCase();
+        } else if (sortField === 'status') {
+          av = a.status || ''; bv = b.status || '';
+        } else {
+          av = a.updated_at || ''; bv = b.updated_at || '';
+        }
+        return av < bv ? -sortDir : av > bv ? sortDir : 0;
+      });
+    }
+
+    window.setSort = function(field) {
+      if (sortField === field) sortDir *= -1;
+      else { sortField = field; sortDir = field === 'updated_at' ? -1 : 1; }
+      renderEntries(allEntries);
+    };
+
+    // Render locale tabs if multiple locales configured
+    if (siteLocales.length > 1) {
+      const filterBar = document.querySelector('.entries-filter-bar');
+      const sep = document.createElement('div');
+      sep.style.cssText = 'width:1px;background:var(--line);margin:0 4px;';
+      filterBar.insertBefore(sep, filterBar.querySelector('[data-status="trash"]'));
+      siteLocales.forEach((loc, i) => {
+        const dbLocale = i === 0 ? '' : loc;
+        const btn = document.createElement('button');
+        btn.className = 'filter-tab' + (dbLocale === '' ? ' active' : '');
+        btn.dataset.locale = dbLocale;
+        btn.textContent = loc.toUpperCase();
+        btn.title = i === 0 ? `${loc.toUpperCase()} (default)` : loc.toUpperCase();
+        btn.style.cssText = 'margin-left:' + (i === 0 ? '4px' : '0');
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.filter-tab[data-locale]').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          activeLocale = dbLocale;
+          loadEntries();
+        });
+        filterBar.insertBefore(btn, filterBar.querySelector('[data-status="trash"]'));
+      });
+    }
+
+    function updateBulkBar() {
+      const bar   = document.getElementById('bulk-bar');
+      const trash = activeFilter === 'trash';
+      document.querySelectorAll('.bulk-normal').forEach(el => el.style.display = trash ? 'none' : '');
+      document.querySelectorAll('.bulk-trash').forEach(el  => el.style.display = trash ? ''     : 'none');
+      if (selected.size > 0) {
+        bar.classList.add('visible');
+        document.getElementById('bulk-count').textContent = selected.size;
+      } else {
+        bar.classList.remove('visible');
+      }
+    }
+
+    async function loadEntries() {
+      selected.clear();
+      updateBulkBar();
+      const qp = new URLSearchParams();
+      if (activeFilter) qp.set('status', activeFilter);
+      if (activeLocale !== undefined) qp.set('locale', activeLocale);
+      const url = `/api/collections/${colId}/entries` + (qp.toString() ? '?' + qp.toString() : '');
+      allEntries = await fetch(url, { credentials: 'include' }).then(r => r.json());
+      renderEntries(allEntries);
+    }
+
+    function renderEntries(entries) {
+      document.getElementById('page-sub').textContent = `${entries.length} entr${entries.length !== 1 ? 'ies' : 'y'}`;
+      // entry count shown in page-sub
+      const wrap = document.getElementById('entries-wrap');
+      if (entries.length === 0) {
+        wrap.innerHTML = '<div class="empty"><div class="empty-icon">◈</div>No entries yet</div>';
+        return;
+      }
+      const isTrash = activeFilter === 'trash';
+      const canSort = !activeFilter;
+      const sorted  = sortEntries(entries);
+      const si = (f) => sortField === f ? (sortDir === 1 ? ' ↑' : ' ↓') : '';
+      const sh = (f, label) => `<th style="cursor:pointer;user-select:none;white-space:nowrap" onclick="setSort('${f}')">${label}${si(f)}</th>`;
+      const statusTh  = isTrash ? '<th>Deleted</th>'  : sh('status','Status');
+      const updatedTh = isTrash ? '<th><span class="sr-only">Actions</span></th>'          : sh('updated_at','Updated');
+      wrap.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              ${canSort ? '<th class="drag-col"><span class="sr-only">Reorder</span></th>' : ''}
+              <th class="cb-col"><input type="checkbox" id="check-all" title="Select all" aria-label="Select all" /></th>
+              ${sh('title','Title / Slug')}${statusTh}${updatedTh}<th><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${sorted.map(e => {
+              const title   = e.data?.title || e.slug;
+              const updated = e.updated_at ? relativeTime(e.updated_at) : '—';
+              const deleted = e.deleted_at ? e.deleted_at.split(' ')[0] : '—';
+              const nextStatus  = e.status === 'published' ? 'draft' : canPublish ? 'published' : 'in_review';
+              const toggleLabel = e.status === 'published' ? 'Unpublish'
+                : e.status === 'in_review' ? (canPublish ? 'Approve' : 'Withdraw')
+                : !canPublish ? 'Submit for review' : e.status === 'scheduled' ? 'Publish now' : 'Publish';
+              const schedInfo   = e.status === 'scheduled' && e.publish_at ? ` · ${e.publish_at.split(' ')[0]}` : '';
+              const localeParam = e.locale ? `&locale=${encodeURIComponent(e.locale)}` : '';
+              const localeBadge = e.locale ? `<span style="font-family:var(--mono);font-size:9px;color:var(--muted);background:var(--bg3);border:1px solid var(--line);border-radius:4px;padding:1px 5px;margin-left:5px;vertical-align:middle">${e.locale}</span>` : '';
+              return `<tr data-slug="${e.slug}" data-locale="${e.locale ?? ''}"${canSort ? ' draggable="true"' : ''}>
+                ${canSort ? `<td class="drag-col"><span class="drag-handle" title="Drag to reorder">⠿</span></td>` : ''}
+                <td class="cb-col"><input type="checkbox" class="row-cb" data-slug="${e.slug}" data-locale="${e.locale ?? ''}" ${selected.has(e.slug) ? 'checked' : ''} /></td>
+                <td>
+                  <div style="color:var(--heading);font-weight:500">${escHtml(title)}${localeBadge}</div>
+                  <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px">${escHtml(e.slug)}</div>
+                </td>
+                <td>${isTrash ? `<span style="font-family:var(--mono);font-size:11px;color:var(--muted)">${deleted}</span>` : `<span class="badge badge-${e.status}">${String(e.status).replace(/_/g, ' ')}${schedInfo}</span>`}</td>
+                <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${isTrash ? '' : updated}</td>
+                <td style="width:1%;white-space:nowrap">
+                  <div class="row-actions">
+                    ${isTrash
+                      ? `<button class="btn-row restore-btn" data-slug="${e.slug}" data-locale="${e.locale ?? ''}">Restore</button>
+                         <button class="btn-row btn-row-danger perm-del-btn" data-slug="${e.slug}" data-locale="${e.locale ?? ''}">Delete forever</button>`
+                      : `<a class="btn-row" href="/editor.html?collection=${colId}&slug=${e.slug}${localeParam}">Edit</a>
+                         <button class="btn-row btn-row-toggle status-toggle" data-slug="${e.slug}" data-locale="${e.locale ?? ''}" data-next="${e.status === 'in_review' && !canPublish ? 'draft' : nextStatus}">${toggleLabel}</button>
+                         <button class="btn-row btn-row-icon dup-btn" data-slug="${e.slug}" data-locale="${e.locale ?? ''}" title="Duplicate">⧉</button>
+                         <button class="btn-row btn-row-danger delete-btn" data-slug="${e.slug}" data-locale="${e.locale ?? ''}">Trash</button>`
+                    }
+                  </div>
+                </td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>`;
+
+      // Select all
+      document.getElementById('check-all').addEventListener('change', e => {
+        wrap.querySelectorAll('.row-cb').forEach(cb => {
+          cb.checked = e.target.checked;
+          if (e.target.checked) selected.add(cb.dataset.slug);
+          else selected.delete(cb.dataset.slug);
+        });
+        updateBulkBar();
+      });
+
+      // Row checkboxes
+      wrap.querySelectorAll('.row-cb').forEach(cb => {
+        cb.addEventListener('change', () => {
+          if (cb.checked) selected.add(cb.dataset.slug);
+          else selected.delete(cb.dataset.slug);
+          updateBulkBar();
+        });
+      });
+
+      // Drag-to-reorder
+      if (canSort) {
+        let dragSrc = null;
+        wrap.querySelectorAll('tr[draggable]').forEach(row => {
+          row.addEventListener('dragstart', e => {
+            dragSrc = row;
+            row.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+          });
+          row.addEventListener('dragend', () => {
+            dragSrc = null;
+            wrap.querySelectorAll('tr').forEach(r => r.classList.remove('dragging','drag-over'));
+          });
+          row.addEventListener('dragover', e => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            wrap.querySelectorAll('tr').forEach(r => r.classList.remove('drag-over'));
+            if (row !== dragSrc) row.classList.add('drag-over');
+          });
+          row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+          row.addEventListener('drop', async e => {
+            e.preventDefault();
+            row.classList.remove('drag-over');
+            if (!dragSrc || dragSrc === row) return;
+            const tbody = row.closest('tbody');
+            const rows  = [...tbody.querySelectorAll('tr')];
+            const fromIdx = rows.indexOf(dragSrc);
+            const toIdx   = rows.indexOf(row);
+            tbody.removeChild(dragSrc);
+            if (fromIdx < toIdx) row.after(dragSrc);
+            else row.before(dragSrc);
+            const slugs = [...tbody.querySelectorAll('tr')].map(r => r.dataset.slug);
+            await fetch(`/api/collections/${colId}/entries/reorder`, {
+              method: 'PATCH', credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ slugs }),
+            });
+          });
+        });
+      }
+
+      // Status toggle
+      wrap.querySelectorAll('.status-toggle').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          btn.disabled = true;
+          const r = await fetch(`/api/collections/${colId}/entries/${btn.dataset.slug}/status`, {
+            method: 'PATCH', credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: btn.dataset.next, locale: btn.dataset.locale ?? '' }),
+          });
+          if (!r.ok) alert((await r.json().catch(() => ({}))).error || 'Could not change status.');
+          loadEntries();
+        });
+      });
+
+      // Duplicate
+      wrap.querySelectorAll('.dup-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          btn.disabled = true;
+          const loc = btn.dataset.locale ?? '';
+          const res = await fetch(`/api/collections/${colId}/entries/${btn.dataset.slug}/duplicate${loc ? '?locale=' + encodeURIComponent(loc) : ''}`, {
+            method: 'POST', credentials: 'include',
+          });
+          if (res.ok) loadEntries();
+          else btn.disabled = false;
+        });
+      });
+
+      // Delete → Trash
+      wrap.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const loc = btn.dataset.locale ?? '';
+          await fetch(`/api/collections/${colId}/entries/${btn.dataset.slug}${loc ? '?locale=' + encodeURIComponent(loc) : ''}`, {
+            method: 'DELETE', credentials: 'include',
+          });
+          loadEntries();
+        });
+      });
+
+      // Restore from Trash
+      wrap.querySelectorAll('.restore-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const loc = btn.dataset.locale ?? '';
+          await fetch(`/api/collections/${colId}/entries/${btn.dataset.slug}/restore${loc ? '?locale=' + encodeURIComponent(loc) : ''}`, {
+            method: 'POST', credentials: 'include',
+          });
+          loadEntries();
+        });
+      });
+
+      // Permanent delete
+      wrap.querySelectorAll('.perm-del-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm(`Permanently delete "${btn.dataset.slug}"? This cannot be undone.`)) return;
+          const loc = btn.dataset.locale ?? '';
+          await fetch(`/api/collections/${colId}/entries/${btn.dataset.slug}/permanent${loc ? '?locale=' + encodeURIComponent(loc) : ''}`, {
+            method: 'DELETE', credentials: 'include',
+          });
+          loadEntries();
+        });
+      });
+    }
+
+    // Filter buttons
+    document.querySelectorAll('.filter-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeFilter = btn.dataset.status;
+        loadEntries();
+      });
+    });
+
+    // Bulk actions
+    async function bulkAction(action) {
+      const slugs = [...selected];
+      if (!slugs.length) return;
+      if (action === 'delete' && !confirm(`Delete ${slugs.length} entr${slugs.length !== 1 ? 'ies' : 'y'}?`)) return;
+      await fetch(`/api/collections/${colId}/entries/bulk`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, slugs, locale: activeLocale }),
+      });
+      loadEntries();
+    }
+    document.getElementById('bulk-publish').addEventListener('click',   () => bulkAction('publish'));
+    document.getElementById('bulk-draft').addEventListener('click',     () => bulkAction('draft'));
+    document.getElementById('bulk-delete').addEventListener('click',    () => bulkAction('delete'));
+    document.getElementById('bulk-restore').addEventListener('click',   () => bulkAction('restore'));
+    document.getElementById('bulk-permanent').addEventListener('click', async () => {
+      const n = selected.size;
+      if (!confirm(`Permanently delete ${n} entr${n !== 1 ? 'ies' : 'y'}? This cannot be undone.`)) return;
+      await bulkAction('permanent');
+    });
+
+    // Bulk AI Summarize
+    document.getElementById('bulk-ai')?.addEventListener('click', async () => {
+      const slugs = [...selected];
+      if (!slugs.length) return;
+      const btn = document.getElementById('bulk-ai');
+      btn.disabled = true; btn.textContent = '✦ Generating…';
+      let done = 0, failed = 0;
+      for (const slug of slugs) {
+        try {
+          const entry = await fetch(`/api/collections/${colId}/entries/${slug}`, { credentials:'include' }).then(r=>r.json());
+          if (entry?.data?.summaryMachine) { done++; continue; }
+          const title = entry?.data?.title || slug;
+          const body = entry?.data?.body || entry?.data?.excerpt || '';
+          const prompt = `Write a concise 2-3 sentence machine summary of this content. Output only the summary, no preamble:\n\nTitle: ${title}\n\n${body.slice(0,2000)}`;
+          const aiRes = await fetch('/api/ai/generate', {
+            method:'POST', credentials:'include',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ prompt }),
+          }).then(r=>r.json());
+          if (aiRes.text) {
+            const data = { ...entry.data, summaryMachine: aiRes.text.trim() };
+            await fetch(`/api/collections/${colId}/entries/${slug}`, {
+              method:'PUT', credentials:'include',
+              headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ data, status: entry.status }),
+            });
+            done++;
+          } else { failed++; }
+        } catch { failed++; }
+        btn.textContent = `✦ ${done}/${slugs.length}…`;
+      }
+      btn.disabled = false; btn.textContent = '✦ AI Summarize';
+      alert(`Done: ${done} summarized${failed ? ', ' + failed + ' failed' : ''}`);
+      location.reload();
+    });
+
+    // CSV Export
+    document.getElementById('export-btn').href = `/api/collections/${colId}/entries/export.csv`;
+
+    // CSV Import
+    document.getElementById('import-file').addEventListener('change', async e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const text = await file.text();
+      const res  = await fetch(`/api/collections/${colId}/entries/import.csv`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'text/csv' },
+        body: text,
+      });
+      const json = await res.json();
+      if (res.ok) {
+        alert(`Import complete: ${json.created} created, ${json.updated} updated${json.skipped ? ', ' + json.skipped + ' skipped' : ''}.`);
+        renderEntries();
+      } else {
+        alert('Import failed: ' + (json.error ?? 'Unknown error'));
+      }
+      e.target.value = '';
+    });
+
+    // ── Entry templates ──────────────────────────────────────────────
+    let _templates = [];
+    let _activeTpl = null;
+
+    async function loadTemplates() {
+      try {
+        const r = await fetch(`/api/meta/templates~${colId}`, { credentials: 'include' });
+        const d = await r.json();
+        _templates = d.value ? JSON.parse(d.value) : [];
+      } catch { _templates = []; }
+    }
+
+    async function openTplMenu() {
+      await loadTemplates();
+      const inner = document.getElementById('tpl-menu-inner');
+      const menu  = document.getElementById('tpl-menu');
+      if (!_templates.length) {
+        inner.innerHTML = '<div style="padding:8px 14px;color:var(--muted)">No templates yet — save one from the editor sidebar.</div>';
+      } else {
+        inner.innerHTML = _templates.map(t =>
+          `<div class="tpl-item" data-id="${t.id}" style="padding:7px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+            <span>${escHtml(t.name)}</span>
+            <button class="tpl-del-btn" data-id="${t.id}" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0 2px;" title="Delete template">✕</button>
+          </div>`
+        ).join('');
+        inner.querySelectorAll('.tpl-item').forEach(el => {
+          el.addEventListener('click', e => {
+            if (e.target.classList.contains('tpl-del-btn')) return;
+            const tpl = _templates.find(t => t.id === el.dataset.id);
+            if (!tpl) return;
+            _activeTpl = tpl;
+            menu.style.display = 'none';
+            document.getElementById('new-title').value = tpl.name;
+            document.getElementById('new-slug').value  = tpl.name.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'').slice(0,60);
+            document.getElementById('new-slug')._touched = true;
+            overlay.style.display = 'flex';
+            document.getElementById('new-slug').focus();
+          });
+        });
+        inner.querySelectorAll('.tpl-del-btn').forEach(btn => {
+          btn.addEventListener('click', async e => {
+            e.stopPropagation();
+            _templates = _templates.filter(t => t.id !== btn.dataset.id);
+            await fetch(`/api/meta/templates.${colId}`, {
+              method: 'PUT', credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ value: JSON.stringify(_templates) }),
+            });
+            openTplMenu();
+          });
+        });
+      }
+      menu.style.display = '';
+    }
+
+    const tplBtn = document.getElementById('tpl-btn');
+    tplBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      const menu = document.getElementById('tpl-menu');
+      if (menu.style.display === 'none' || !menu.style.display) openTplMenu();
+      else menu.style.display = 'none';
+    });
+    document.addEventListener('click', () => { document.getElementById('tpl-menu').style.display = 'none'; });
+
+    function escHtml(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    // New entry modal
+    const overlay = document.getElementById('modal-overlay');
+    document.getElementById('new-btn').addEventListener('click', () => {
+      _activeTpl = null;
+      overlay.style.display = 'flex';
+      document.getElementById('new-slug').focus();
+    });
+    document.getElementById('modal-cancel').addEventListener('click', () => {
+      overlay.style.display = 'none';
+    });
+
+    // Auto-generate slug from title
+    document.getElementById('new-title').addEventListener('input', e => {
+      const slug = document.getElementById('new-slug');
+      if (!slug._touched) {
+        slug.value = e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 60);
+      }
+    });
+    document.getElementById('new-slug').addEventListener('input', e => {
+      e.target._touched = e.target.value.length > 0;
+    });
+
+    document.getElementById('modal-create').addEventListener('click', async () => {
+      const slug  = document.getElementById('new-slug').value.trim();
+      const title = document.getElementById('new-title').value.trim();
+      const errEl = document.getElementById('modal-error');
+      if (!slug) { errEl.textContent = 'Slug is required'; errEl.style.display = 'block'; return; }
+      errEl.style.display = 'none';
+
+      const entryData = _activeTpl ? { ..._activeTpl.data, title } : { title };
+      const res = await fetch(`/api/collections/${colId}/entries`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, data: entryData, status: 'draft', locale: activeLocale }),
+      });
+      if (res.ok) {
+        overlay.style.display = 'none';
+        const localeParam = activeLocale ? `&locale=${encodeURIComponent(activeLocale)}` : '';
+        location.href = `/editor.html?collection=${colId}&slug=${slug}${localeParam}`;
+      } else {
+        const d = await res.json();
+        errEl.textContent = d.error ?? 'Could not create entry';
+        errEl.style.display = 'block';
+      }
+    });
+
+    loadEntries();
+  </script>
+
+  <!-- New entry modal (inside .main so SPA navigation keeps it) -->
+  <div id="modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;align-items:center;justify-content:center">
+    <div style="background:var(--bg2);border:1px solid var(--line);border-radius:var(--radius);padding:28px 32px;width:400px;max-width:90vw">
+      <h3 style="font-size:14px;color:var(--heading);margin-bottom:20px;font-weight:500">New Entry</h3>
+      <div class="field">
+        <label class="label" for="new-slug">Slug</label>
+        <input class="input" id="new-slug" placeholder="my-entry-title" />
+      </div>
+      <div class="field">
+        <label class="label" for="new-title">Title</label>
+        <input class="input" id="new-title" placeholder="Entry title" />
+      </div>
+      <div id="modal-error" style="color:var(--red);font-size:12px;margin-bottom:12px;display:none"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-ghost" id="modal-cancel">Cancel</button>
+        <button class="btn btn-primary" id="modal-create">Create</button>
+      </div>
+    </div>
+  </div>
+</main>
+  </div>
+
+  <script src="/search.js"></script>
+  <script src="/sidebar.js"></script>
+  <script src="/router.js"></script>
+</body>
+</html>

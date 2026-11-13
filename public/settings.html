@@ -1,0 +1,1576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orbiter Admin — Settings</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Space+Grotesk:wght@300;400;500;600&family=Noto+Serif+JP:wght@200;300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css" />
+  <script src="/theme.js"></script>
+  <style>
+    .settings-wrap { max-width:1100px; padding-bottom:24px; }
+
+    /* Two-column grid for settings groups */
+    .settings-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      align-items: start;
+      margin-bottom: 8px;
+    }
+    .settings-grid .settings-group { margin-bottom: 0; }
+    .settings-wrap > .settings-group { margin-bottom: 8px; }
+
+    @media (max-width: 720px) {
+      .settings-wrap { max-width: 720px; }
+      .settings-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Toggle switch */
+    .toggle { position:relative; display:inline-block; width:36px; height:20px; flex-shrink:0; cursor:pointer; justify-self:end; }
+    .toggle input { opacity:0; width:0; height:0; }
+    .toggle-slider { position:absolute; inset:0; background:var(--line); border-radius:10px; transition:background 0.2s; }
+    .toggle-slider::before { content:''; position:absolute; width:16px; height:16px; left:2px; bottom:2px; background:var(--bg0); border-radius:50%; transition:transform 0.2s; }
+    .toggle input:checked + .toggle-slider { background:var(--accent); }
+    .toggle input:checked + .toggle-slider::before { transform:translateX(16px); }
+
+    /* Card — einheitliches bg2, eine Farbe, kein Alternieren */
+    .settings-group {
+      background: var(--bg2);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    /* Section label — klein, ruhig, ◆ statt Left-Strip */
+    .group-header {
+      padding: 8px 20px;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .group-header::before { content: "◆"; color: var(--gold); font-size: 5px; line-height: 1; }
+
+    /* Setting row — hover, keine alternierenden Hintergründe */
+    /* rows that hold a list (API keys, webhooks) use the full width instead of the 220px control column */
+    .setting-row.setting-row-wide { display: flex; flex-direction: column; align-items: stretch; gap: 12px; }
+    .setting-row {
+      display: grid;
+      grid-template-columns: 1fr 220px;
+      align-items: center;
+      gap: 16px;
+      padding: 11px 20px;
+      border-bottom: 1px solid var(--line2);
+      transition: background 0.1s;
+    }
+    .setting-row:last-child { border-bottom: none; }
+    .setting-row:hover { background: var(--hover-bg); }
+    .setting-label { font-size: 13px; color: var(--heading); margin-bottom: 3px; }
+    .setting-desc { font-size: 11px; color: var(--mid); line-height: 1.55; }
+
+    /* Inputs — vollständig gerundete Box, weicher Focus */
+    .settings-wrap .input {
+      width: 100%;
+      background: var(--bg0);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 7px 11px;
+      color: var(--heading);
+      font-family: var(--mono);
+      font-size: 12px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .settings-wrap .input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-bg);
+    }
+    .settings-wrap .input[readonly] {
+      color: var(--muted);
+      cursor: default;
+      background: var(--bg1);
+    }
+
+    /* Save row */
+    .save-row {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 10px 20px;
+      border-top: 1px solid var(--line);
+      gap: 10px;
+    }
+
+    /* Banners */
+    .banner { padding: 8px 16px; font-size: 11px; display: flex; align-items: center; gap: 8px; border-radius: 8px; margin-bottom: 8px; }
+    .banner-ok  { background: var(--jade-bg); color: var(--jade); border: 1px solid rgba(45,139,106,.2); }
+    .banner-ok::before { content: "✓"; font-size: 12px; }
+    .banner-err { background: var(--red-bg); color: var(--red); border: 1px solid rgba(240,112,128,.18); }
+    .banner-err::before { content: "✕"; font-size: 12px; }
+
+    /* Theme cards */
+    .theme-cards { display: flex; gap: 10px; flex-wrap: wrap; }
+    .theme-card {
+      flex: 1; min-width: 110px;
+      background: var(--bg0);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px 14px 12px;
+      cursor: pointer;
+      text-align: left;
+      font-family: var(--mono);
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    }
+    .theme-card:hover { border-color: var(--mid); box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+    .theme-card.active { border-color: var(--accent); background: var(--accent-bg); box-shadow: 0 0 0 1px var(--accent); }
+    .theme-swatch { display: flex; gap: 4px; margin-bottom: 10px; height: 4px; }
+    .theme-swatch span { flex: 1; border-radius: 2px; }
+    .theme-card-name { font-size: 12px; color: var(--heading); margin-bottom: 2px; font-weight: 500; }
+    .theme-card-sub  { font-size: 10px; color: var(--mid); letter-spacing: 0.03em; line-height: 1.4; }
+
+    /* Style cards */
+    .style-cards { display: flex; gap: 10px; }
+    .style-card {
+      flex: 1; min-width: 120px; max-width: 180px;
+      background: var(--bg0); border: 1px solid var(--line); border-radius: 8px;
+      padding: 12px 12px 10px; cursor: pointer; text-align: left;
+      font-family: var(--mono); transition: border-color .15s, background .15s, box-shadow .15s;
+    }
+    .style-card:hover { border-color: var(--mid); box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+    .style-card.active { border-color: var(--accent); background: var(--accent-bg); box-shadow: 0 0 0 1px var(--accent); }
+    .style-preview {
+      display: flex; gap: 5px; height: 44px; margin-bottom: 10px;
+      background: var(--bg3); border-radius: 5px; overflow: hidden; position: relative;
+    }
+    .sp-sidebar { width: 14px; background: var(--bg2); flex-shrink: 0; }
+    .sp-body { flex: 1; padding: 5px 5px; display: flex; flex-direction: column; gap: 4px; }
+    .sp-row { height: 6px; background: var(--bg2); border-radius: 2px; }
+    .sp-row-short { width: 65%; }
+    /* Glass preview */
+    .sp-glass { background: var(--bg0); }
+    .sp-orb { position: absolute; border-radius: 50%; }
+    .sp-orb1 { width: 40px; height: 40px; top: -10px; left: 10px; background: var(--accent-bg); filter: blur(8px); }
+    .sp-orb2 { width: 30px; height: 30px; bottom: -5px; right: 10px; background: var(--gold-bg); filter: blur(6px); }
+    .sp-glass-panel { background: color-mix(in srgb, var(--bg2) 60%, transparent); backdrop-filter: blur(4px); border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent); border-radius: 3px; }
+    .sp-glass .sp-sidebar { width: 14px; background: color-mix(in srgb, var(--bg1) 55%, transparent); backdrop-filter: blur(4px); }
+
+    /* Pod section */
+    .pod-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 9px 20px;
+      border-bottom: 1px solid var(--line2);
+    }
+    .pod-meta-path {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
+    .pod-meta-ver {
+      flex-shrink: 0;
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      background: var(--bg3);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 2px 8px;
+    }
+    .pod-col-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 20px;
+      border-bottom: 1px solid var(--line2);
+      transition: background 0.1s;
+    }
+    .pod-col-row:last-child { border-bottom: none; }
+    .pod-col-row:hover { background: var(--hover-bg); }
+    .pod-col-name { font-size: 13px; color: var(--text); }
+    .pod-col-count {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      background: var(--bg3);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 2px 8px;
+    }
+
+    /* Pod stats strip */
+    .pod-stat-label { font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:3px; }
+
+    /* Support */
+    .support-widget {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 14px 20px;
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      background: var(--bg2);
+    }
+    .support-copy-label { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+    .support-copy-text { font-size: 12px; color: var(--text); line-height: 1.6; }
+    .btn-support {
+      flex-shrink: 0;
+      padding: 8px 18px;
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: background 0.15s, color 0.15s;
+      border-radius: 6px;
+    }
+    .btn-support:hover { background: var(--gold); color: var(--bg0); }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <a class="logo" href="/dashboard.html"><div class="logo-mark">OR</div>Orbiter</a>
+      <div class="topbar-right">
+        <button class="search-trigger" id="search-btn" title="Search (⌘K)">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          Search <kbd>⌘K</kbd>
+        </button>
+        <button class="scheme-toggle" id="scheme-toggle" title="Toggle scheme">◐</button>
+        <span class="user" id="topbar-user"></span>
+        <span class="logout" id="logout-btn">Sign out</span>
+      </div>
+    </header>
+    <nav class="sidebar">
+      <div class="nav-section">Content</div>
+      <a class="nav-item" href="/dashboard.html"><span class="nav-icon">◈</span>Dashboard</a>
+      <a class="nav-item" href="/collections.html"><span class="nav-icon">⊞</span>Collections</a>
+      <div class="nav-section">Assets</div>
+      <a class="nav-item" href="/media.html"><span class="nav-icon">⊟</span>Media</a>
+      <div class="nav-section">Tools</div>
+      <a class="nav-item" href="/inbox.html"><span class="nav-icon">✉</span>Inbox</a>
+      <a class="nav-item" href="/snippets.html"><span class="nav-icon">⌗</span>Snippets</a>
+
+      <div class="nav-section">System</div>
+      <a class="nav-item" href="/schema.html"><span class="nav-icon">◈</span>Schema</a>
+      <a class="nav-item" href="/build.html"><span class="nav-icon">▲</span>Build</a>
+      <a class="nav-item active" href="/settings.html"><span class="nav-icon">◎</span>Settings</a>
+      <a class="nav-item admin-only" href="/users.html" style="display:none"><span class="nav-icon">◉</span>Users</a>
+            <a class="nav-item admin-only" href="/pods.html" style="display:none"><span class="nav-icon">◈</span>Pods</a>
+      <div class="sidebar-footer">
+        <div class="pod-name" id="pod-name">content.pod</div>
+        <div class="pod-info" id="pod-info"></div>
+        <div class="pod-version" id="pod-version"></div>
+        <div class="pod-status"><span class="pod-dot"></span>pod synced</div>
+      </div>
+    </nav>
+    <main class="main">
+      <div class="page-header glass-card" style="display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;margin-bottom:4px;">
+        <h1 class="page-title">Settings</h1>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span id="header-save-msg" style="font-size:10px;color:var(--jade);opacity:0;transition:opacity .3s"></span>
+          <button type="submit" form="site-form" class="btn-save" id="header-save-btn">Save settings</button>
+        </div>
+      </div>
+      <div class="settings-wrap" id="settings-content">
+        <div class="empty"><div class="spinner"></div></div>
+      </div>
+    
+  <script type="module">
+    const me = await fetch('/api/auth/me',{credentials:'include'}).then(r=>r.json()).catch(()=>null);
+    if (!me?.user) { location.replace('/login.html'); throw new Error('unauthenticated'); }
+    document.getElementById('topbar-user').textContent = me.user.username;
+    if (me.user.role==='admin') document.querySelectorAll('.admin-only').forEach(el=>el.style.display='');
+    document.getElementById('logout-btn').addEventListener('click',async()=>{
+      await fetch('/api/auth/logout',{method:'POST',credentials:'include'});
+      location.replace('/login.html');
+    });
+
+    const meta = await fetch('/api/meta',{credentials:'include'}).then(r=>r.json()).catch(()=>({}));
+
+    const get = k => meta[k] ?? '';
+    // pod-info managed by sidebar.js
+
+    function showBanner(id, cls, text) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.className = 'banner ' + cls;
+      el.textContent = (cls==='banner-ok'?'✓ ':'✕ ') + text;
+      el.style.display = '';
+      setTimeout(()=>el.style.display='none', 3500);
+    }
+
+    async function saveMeta(pairs) {
+      const body = Object.fromEntries(pairs);
+      await fetch('/api/meta', {
+        method:'PUT', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(body),
+      });
+    }
+
+    const ghConfigured   = !!(get('github.token') && get('github.repo'));
+    const currentTheme  = localStorage.getItem('orb_theme') || get('ui.theme') || 'space'; // what is actually applied
+    const currentScheme = localStorage.getItem('orb_scheme') || 'auto';
+    const currentStyle  = localStorage.getItem('orb_style')  || 'glass'; // same default as theme.js
+
+    const wrap = document.getElementById('settings-content');
+    wrap.innerHTML = `
+      <div id="site-banner" class="banner" style="display:none"></div>
+
+      <!-- All settings — one form -->
+      <form id="site-form">
+        <div class="settings-grid">
+        <div class="settings-group">
+          <div class="group-header">Site</div>
+          <div class="setting-row">
+            <div><div class="setting-label">Site name</div><div class="setting-desc">Displayed in the admin header</div></div>
+            <input class="input" name="site.name" value="${get('site.name')}" placeholder="My Site" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Site URL</div><div class="setting-desc">Production URL for preview links</div></div>
+            <input class="input" name="site.url" value="${get('site.url')}" placeholder="https://example.com" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Description</div><div class="setting-desc">Short site description</div></div>
+            <input class="input" name="site.description" value="${get('site.description')}" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Primary locale</div><div class="setting-desc">Default language code, e.g. en</div></div>
+            <input class="input" name="site.locale" value="${get('site.locale')}" placeholder="en" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Additional locales</div><div class="setting-desc">Comma-separated, e.g. en,de,fr</div></div>
+            <input class="input" name="site.locales" value="${get('site.locales')}" placeholder="en,de" />
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="group-header">Dashboard widgets</div>
+          <div class="setting-row">
+            <div><div class="setting-label">Calendar</div><div class="setting-desc">Mini calendar + upcoming entries</div></div>
+            <label class="toggle"><input type="checkbox" name="dashboard.show_calendar" ${get('dashboard.show_calendar')!=='0'?'checked':''} /><span class="toggle-slider"></span></label>
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Recently edited</div><div class="setting-desc">Latest entries across all collections</div></div>
+            <label class="toggle"><input type="checkbox" name="dashboard.show_recent" ${get('dashboard.show_recent')!=='0'?'checked':''} /><span class="toggle-slider"></span></label>
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Collections</div><div class="setting-desc">Collection cards with publish stats</div></div>
+            <label class="toggle"><input type="checkbox" name="dashboard.show_collections" ${get('dashboard.show_collections')!=='0'?'checked':''} /><span class="toggle-slider"></span></label>
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Notes &amp; To-Do</div><div class="setting-desc">Workspace panels (hidden in Station mode)</div></div>
+            <label class="toggle"><input type="checkbox" name="dashboard.show_workspace" ${get('dashboard.show_workspace')!=='0'?'checked':''} /><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+        <div class="settings-group">
+          <div class="group-header">AI Assistant</div>
+          <div class="setting-row">
+            <div><div class="setting-label">Provider</div><div class="setting-desc">Choose your AI backend. Gemini and Ollama are free.</div></div>
+            <select class="input" name="ai.provider" id="ai-provider-select" style="appearance:auto">
+              <option value="gemini" ${get('ai.provider')==='gemini'?'selected':''}>★ Google Gemini — free tier (recommended)</option>
+              <option value="ollama" ${get('ai.provider')==='ollama'||!get('ai.provider')?'selected':''}>Ollama — local, free, no API key</option>
+              <option value="anthropic" ${get('ai.provider')==='anthropic'?'selected':''}>Anthropic (Claude) — API key required</option>
+              <option value="openai" ${get('ai.provider')==='openai'?'selected':''}>OpenAI (GPT) — API key required</option>
+            </select>
+          </div>
+          <div id="ai-hint" style="padding:6px 20px;font-size:10px;color:var(--mid);line-height:1.6;border-bottom:1px solid var(--line2)"></div>
+          <div class="setting-row">
+            <div><div class="setting-label">Model</div><div class="setting-desc">Leave empty for default</div></div>
+            <input class="input" name="ai.model" value="${get('ai.model')}" placeholder="gemini-2.5-flash" />
+          </div>
+          <div class="setting-row" id="ai-key-row">
+            <div><div class="setting-label">API Key</div><div class="setting-desc" id="ai-key-desc">Not needed for Ollama.</div></div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input class="input" name="ai.api_key" type="text" value="${get('ai.api_key')}" placeholder="API key…" style="flex:1" autocomplete="off" />
+              <a id="ai-get-key-btn" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="btn btn-ghost btn-sm" style="white-space:nowrap;display:none">↗ Get free key</a>
+            </div>
+          </div>
+          <div class="setting-row" id="ai-ollama-row" style="display:none">
+            <div><div class="setting-label">Ollama URL</div><div class="setting-desc">Default: http://localhost:11434</div></div>
+            <input class="input" name="ai.ollama_url" value="${get('ai.ollama_url')}" placeholder="http://localhost:11434" />
+          </div>
+        </div>
+        <div class="settings-group">
+          <div class="group-header">Build &amp; Language</div>
+          <div class="setting-row">
+            <div><div class="setting-label">Webhook URL</div><div class="setting-desc">POST to this URL to trigger a build</div></div>
+            <input class="input" name="build.webhook_url" value="${get('build.webhook_url')}" placeholder="https://api.netlify.com/build/hook/…" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Admin language</div><div class="setting-desc">Interface labels</div></div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-ghost btn-sm lang-btn ${(localStorage.getItem('orb_lang')||'en')==='en'?'active':''}" data-lang="en">EN</button>
+              <button class="btn btn-ghost btn-sm lang-btn ${localStorage.getItem('orb_lang')==='de'?'active':''}" data-lang="de">DE</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="group-header">GitHub</div>
+          <div class="setting-row">
+            <div><div class="setting-label">GitHub token</div><div class="setting-desc">Personal access token with repo scope</div></div>
+            <input class="input" type="password" name="github.token" value="${get('github.token')}" autocomplete="off" placeholder="ghp_…" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Repository</div><div class="setting-desc">owner/repo format</div></div>
+            <input class="input" name="github.repo" value="${get('github.repo')}" placeholder="owner/my-site" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Branch</div><div class="setting-desc">Target branch for commits</div></div>
+            <input class="input" name="github.branch" value="${get('github.branch')||'main'}" placeholder="main" />
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="group-header">Public API</div>
+          <div class="setting-row">
+            <div><div class="setting-label">Enable public API</div><div class="setting-desc">Expose read-only collection endpoints</div></div>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+              <input type="checkbox" name="api.enabled" value="1" ${get('api.enabled')==='1'?'checked':''} style="accent-color:var(--accent);width:14px;height:14px;" />
+              <span style="font-size:11px;color:var(--text);font-family:var(--mono);">Enabled</span>
+            </label>
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">API token</div><div class="setting-desc">Optional bearer token to restrict access (also required for <code>?status=draft</code>). Stored hashed — type a new value to replace it.</div></div>
+            <input class="input" type="password" name="api.token" value="${get('api.token')}" autocomplete="off" placeholder="Leave blank for open access" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Review before publishing</div><div class="setting-desc">Editors can only submit entries for review; admins and reviewers publish. Assign the reviewer role under Users.</div></div>
+            <label class="toggle"><input type="checkbox" name="workflow.review" value="1" ${get('workflow.review')==='1'?'checked':''} /><span class="toggle-slider"></span></label>
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Public API collections</div><div class="setting-desc">Collections exposed at <code>/api/public/[collection]</code> without auth. Comma-separated IDs, or <code>*</code> for all. Leave blank to disable.</div></div>
+            <input class="input" type="text" name="public.collections" value="${get('public.collections')??''}" placeholder="posts, pages  or  *" style="font-family:var(--mono);font-size:12px;" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Require API key</div><div class="setting-desc">When enabled, all <code>/api/public/</code> requests need a valid Bearer token</div></div>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+              <input type="checkbox" name="api.requireKey" value="1" ${get('api.requireKey')==='1'?'checked':''} style="accent-color:var(--accent);width:14px;height:14px;" />
+              <span style="font-size:11px;color:var(--text);font-family:var(--mono);">Enabled</span>
+            </label>
+          </div>
+          <div class="setting-row setting-row-wide">
+            <div style="display:flex;justify-content:space-between;width:100%;align-items:center">
+              <div>
+                <div class="setting-label">API Keys</div>
+                <div class="setting-desc">Keys for the Public Content API and MCP. Limit a key to collections, give it an expiry or a rate limit, or let it create drafts over MCP (never publish). Shown once on creation.</div>
+              </div>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-gen-api-key">Generate key</button>
+            </div>
+            <div id="api-keys-list" style="width:100%;display:flex;flex-direction:column;gap:6px;font-size:11px;color:var(--muted)">Loading…</div>
+          </div>
+          <div class="setting-row setting-row-wide">
+            <div style="display:flex;justify-content:space-between;width:100%;align-items:center">
+              <div>
+                <div class="setting-label">Webhooks</div>
+                <div class="setting-desc">Called when an entry is published or deleted. Payloads are signed (<code>X-Orbiter-Signature</code>, HMAC-SHA256), failed deliveries are retried, recent deliveries are logged. <a href="/docs/webhooks" target="_blank" style="color:var(--accent)">How to verify →</a></div>
+              </div>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-add-webhook">Add webhook</button>
+            </div>
+            <div id="webhooks-list" style="width:100%;display:flex;flex-direction:column;gap:6px;font-size:11px;color:var(--muted)">Loading…</div>
+            <details style="width:100%"><summary style="cursor:pointer;font-size:11px;color:var(--muted)">Recent deliveries</summary><div id="webhooks-log" style="margin-top:8px;font-family:var(--mono);font-size:10px;color:var(--muted)"></div></details>
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Preview token</div><div class="setting-desc">Appended to Preview URLs — allows viewing draft entries on your site</div></div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input class="input" type="text" id="preview-token-display" value="${get('preview.token')??''}" readonly style="flex:1;font-family:var(--mono);font-size:11px;" placeholder="No token generated" />
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-gen-preview-token">Generate</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="group-header">Preview URLs</div>
+          <div style="padding:10px 20px 4px;font-size:11px;color:var(--muted);line-height:1.6">
+            URL template opened when clicking <strong style="color:var(--text);font-weight:500">↗ Preview</strong> in the editor. Use <code style="font-family:var(--mono);font-size:10px;background:var(--bg3);padding:1px 5px;border-radius:3px">{slug}</code> as placeholder.
+          </div>
+          <div id="preview-url-rows">
+            <div style="padding:14px 20px;font-size:11px;color:var(--muted)">Loading collections…</div>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="group-header">Media</div>
+          <div class="setting-row">
+            <div><div class="setting-label">Backend</div><div class="setting-desc">Where uploaded files are stored</div></div>
+            <select class="input" name="media.backend" id="media-backend-select">
+              <option value="blob"   ${(get('media.backend')||'blob')==='blob'   ? 'selected':''}>blob — SQLite BLOB (default)</option>
+              <option value="local"  ${get('media.backend')==='local'  ? 'selected':''}>local — filesystem</option>
+              <option value="github" ${get('media.backend')==='github' ? 'selected':''}>github — GitHub + jsDelivr CDN</option>
+              <option value="s3"     ${get('media.backend')==='s3'     ? 'selected':''}>s3 — S3-compatible (AWS, R2, B2, MinIO)</option>
+            </select>
+          </div>
+
+          <div id="media-local-fields" style="display:none">
+            <div class="setting-row">
+              <div><div class="setting-label">Local path</div><div class="setting-desc">Absolute or relative path on the server</div></div>
+              <input class="input" name="media.local_path" value="${get('media.local_path')}" placeholder="./media" />
+            </div>
+          </div>
+
+          <div id="media-s3-fields" style="display:none">
+            <div class="setting-row">
+              <div><div class="setting-label">Bucket</div></div>
+              <input class="input" name="media.s3_bucket" value="${get('media.s3_bucket')}" placeholder="my-media-bucket" />
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Region</div><div class="setting-desc">AWS region or "auto" for R2</div></div>
+              <input class="input" name="media.s3_region" value="${get('media.s3_region')||'auto'}" placeholder="eu-central-1" />
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Endpoint</div><div class="setting-desc">Custom endpoint for R2, B2, MinIO — leave blank for AWS</div></div>
+              <input class="input" name="media.s3_endpoint" value="${get('media.s3_endpoint')}" placeholder="https://xxxx.r2.cloudflarestorage.com" />
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Access Key ID</div></div>
+              <input class="input" type="password" name="media.s3_access_key" value="${get('media.s3_access_key')}" autocomplete="off" placeholder="Access key ID" />
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Secret Access Key</div></div>
+              <input class="input" type="password" name="media.s3_secret_key" value="${get('media.s3_secret_key')}" autocomplete="off" placeholder="Secret access key" />
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Public URL</div><div class="setting-desc">Base URL for serving files, e.g. your R2 public domain or CDN</div></div>
+              <input class="input" name="media.s3_public_url" value="${get('media.s3_public_url')}" placeholder="https://media.example.com" />
+            </div>
+          </div>
+
+          <div id="media-github-fields" style="display:none">
+            <div class="setting-row">
+              <div><div class="setting-label">GitHub token</div><div class="setting-desc">Uses the token from the GitHub section above if left blank</div></div>
+              <input class="input" type="password" name="media.github_token" value="${get('media.github_token')}" autocomplete="off" placeholder="ghp_… (optional, falls back to GitHub token above)" />
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Repository</div><div class="setting-desc">owner/repo — can differ from your content repo</div></div>
+              <input class="input" name="media.github_repo" value="${get('media.github_repo')}" placeholder="owner/my-media" />
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Branch</div></div>
+              <input class="input" name="media.github_branch" value="${get('media.github_branch')||'main'}" placeholder="main" />
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Directory</div><div class="setting-desc">Subdirectory inside the repo</div></div>
+              <input class="input" name="media.github_dir" value="${get('media.github_dir')||'media'}" placeholder="media" />
+            </div>
+          </div>
+          <div style="padding:6px 20px;border-top:1px solid var(--line);font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:6px;"><span style="font-size:4px;color:var(--gold)">◆</span>Image optimization</div>
+          <div class="setting-row">
+            <div><div class="setting-label">Max width</div><div class="setting-desc">Images wider than this are resized on upload (px). Leave blank to disable.</div></div>
+            <input class="input" name="media.img_max_width" type="number" min="400" max="8000" step="100" value="${get('media.img_max_width')||'2400'}" placeholder="2400" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Quality</div><div class="setting-desc">JPEG / WebP / AVIF compression quality (1–100)</div></div>
+            <input class="input" name="media.img_quality" type="number" min="1" max="100" value="${get('media.img_quality')||'85'}" placeholder="85" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Convert to WebP</div><div class="setting-desc">Auto-convert JPEG and PNG uploads to WebP on ingest — smaller files, same quality</div></div>
+            <label class="toggle"><input type="checkbox" name="media.img_convert_webp" value="1" ${get('media.img_convert_webp')==='1'?'checked':''} /><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="group-header">Email notifications</div>
+          <div class="setting-row">
+            <div><div class="setting-label">SMTP host</div><div class="setting-desc">e.g. smtp.fastmail.com, smtp.gmail.com</div></div>
+            <input class="input" name="email.smtp_host" value="${get('email.smtp_host')||''}" placeholder="smtp.example.com" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">SMTP port</div><div class="setting-desc">Usually 587 (STARTTLS) or 465 (SSL)</div></div>
+            <input class="input" name="email.smtp_port" type="number" value="${get('email.smtp_port')||'587'}" placeholder="587" style="max-width:100px" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">SMTP username</div></div>
+            <input class="input" name="email.smtp_user" value="${get('email.smtp_user')||''}" placeholder="you@example.com" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">SMTP password</div></div>
+            <input class="input" type="password" name="email.smtp_pass" value="${get('email.smtp_pass')||''}" placeholder="••••••••" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">From address</div><div class="setting-desc">Defaults to SMTP username if blank</div></div>
+            <input class="input" name="email.smtp_from" value="${get('email.smtp_from')||''}" placeholder="Orbiter &lt;noreply@example.com&gt;" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Notify to</div><div class="setting-desc">Recipient email address for notifications</div></div>
+            <input class="input" name="email.notify_to" value="${get('email.notify_to')||''}" placeholder="admin@example.com" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Notify on publish</div><div class="setting-desc">Send email when an entry is published</div></div>
+            <input type="checkbox" name="email.notify_publish" value="1" ${get('email.notify_publish')==='1'?'checked':''} style="accent-color:var(--accent);width:14px;height:14px;" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Notify on comment</div><div class="setting-desc">Send email when a new comment is posted</div></div>
+            <input type="checkbox" name="email.notify_comment" value="1" ${get('email.notify_comment')==='1'?'checked':''} style="accent-color:var(--accent);width:14px;height:14px;" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Notify on form submission</div><div class="setting-desc">Send email when a contact form is submitted</div></div>
+            <input type="checkbox" name="email.notify_form" value="1" ${get('email.notify_form')==='1'?'checked':''} style="accent-color:var(--accent);width:14px;height:14px;" />
+          </div>
+        </div>
+
+        <div class="settings-group" style="grid-column:1/-1">
+          <div class="group-header">Import</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:24px;padding:14px 20px">
+            <div>
+              <div class="setting-label" style="margin-bottom:5px">Import content</div>
+              <div class="setting-desc">Supports <strong style="color:var(--text);font-weight:500">WordPress WXR</strong> (.xml export), <strong style="color:var(--text);font-weight:500">JSON</strong>, and <strong style="color:var(--text);font-weight:500">CSV</strong>. Entries are matched to existing collections by field name. Images and media are imported automatically.</div>
+            </div>
+            <a class="btn btn-primary" href="/import.html" style="white-space:nowrap;flex-shrink:0">⬆ Open importer</a>
+          </div>
+        </div>
+
+        <div class="settings-group" style="grid-column:1/-1">
+          <div class="group-header">Templates</div>
+          <div id="tpl-banner" class="banner" style="display:none;margin:8px 20px 0"></div>
+          <div style="padding:14px 20px;border-bottom:1px solid var(--line2)">
+            <div class="setting-label" style="margin-bottom:6px">Add built-in template</div>
+            <div class="setting-desc" style="margin-bottom:12px">Install pre-built collection schemas into this pod. Existing collections are not overwritten.</div>
+            <div id="tpl-available" style="display:flex;flex-wrap:wrap;gap:8px;">
+              <span style="font-size:11px;color:var(--muted)">Loading…</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:12px;padding:14px 20px;flex-wrap:wrap;align-items:flex-start">
+            <div style="flex:1;min-width:240px;">
+              <div class="setting-label" style="margin-bottom:6px">Export collections as template</div>
+              <div class="setting-desc" style="margin-bottom:10px">Select collections and download as a shareable JSON template file.</div>
+              <div id="tpl-export-cols" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px"></div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <label style="font-size:10px;color:var(--muted);display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none">
+                  <input type="checkbox" id="tpl-export-entries" checked style="accent-color:var(--accent);width:13px;height:13px;" />
+                  Include sample entries
+                </label>
+                <button type="button" class="btn btn-ghost btn-sm" id="tpl-export-btn" disabled>⬇ Export</button>
+              </div>
+            </div>
+            <div style="flex:1;min-width:240px;">
+              <div class="setting-label" style="margin-bottom:6px">Import template from file</div>
+              <div class="setting-desc" style="margin-bottom:10px">Upload a <code style="font-family:var(--mono);font-size:10px;background:var(--bg3);padding:1px 5px;border-radius:3px">.orbiter-template.json</code> file to add its collections.</div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <button type="button" class="btn btn-ghost btn-sm" id="tpl-import-btn">⬆ Import template</button>
+                <span id="tpl-import-status" style="font-size:10px;color:var(--muted)"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-group" style="grid-column:1/-1">
+          <div class="group-header">FTP / FTPS Deploy</div>
+          <div class="setting-row">
+            <div><div class="setting-label">FTP host</div><div class="setting-desc">e.g. ftp.world4you.com or ftp.strato.de</div></div>
+            <input class="input" name="ftp.host" value="${get('ftp.host')||''}" placeholder="ftp.example.com" autocomplete="off" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Port</div><div class="setting-desc">21 for FTP (default), 990 for implicit FTPS</div></div>
+            <input class="input" name="ftp.port" type="number" value="${get('ftp.port')||'21'}" placeholder="21" style="max-width:100px" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Username</div></div>
+            <input class="input" name="ftp.user" value="${get('ftp.user')||''}" placeholder="u12345678" autocomplete="off" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Password</div></div>
+            <input class="input" type="password" name="ftp.password" value="${get('ftp.password')||''}" autocomplete="off" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Use FTPS</div><div class="setting-desc">Secure FTP over TLS (explicit mode)</div></div>
+            <input type="checkbox" name="ftp.secure" value="1" ${get('ftp.secure')==='1'?'checked':''} style="accent-color:var(--accent);width:14px;height:14px;" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Remote path</div><div class="setting-desc">Target folder on the server</div></div>
+            <input class="input" name="ftp.remote_path" value="${get('ftp.remote_path')||''}" placeholder="/public_html" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Local dist path</div><div class="setting-desc">Absolute path to your Astro <code style="font-family:var(--mono);font-size:10px;background:var(--bg3);padding:1px 5px;border-radius:3px">dist/</code> folder on this machine</div></div>
+            <input class="input" name="ftp.local_path" value="${get('ftp.local_path')||''}" placeholder="/Users/me/my-site/dist" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Auto-deploy after build</div><div class="setting-desc">Upload via FTP automatically after a successful build webhook</div></div>
+            <input type="checkbox" name="ftp.auto_deploy" value="1" ${get('ftp.auto_deploy')==='1'?'checked':''} style="accent-color:var(--accent);width:14px;height:14px;" />
+          </div>
+          <div class="save-row" style="justify-content:flex-start;gap:14px">
+            <button type="button" class="btn btn-ghost" id="ftp-test-btn">Test connection</button>
+            <span id="ftp-test-result" style="font-size:11px;color:var(--muted)"></span>
+          </div>
+        </div>
+
+        </div><!-- /settings-grid -->
+      </form>
+
+      <!-- GitHub Sync (conditional) -->
+      <div id="github-banner" class="banner" style="display:none"></div>
+      ${ghConfigured ? `
+      <div class="settings-group">
+        <div class="group-header">GitHub Sync</div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Push to GitHub</div>
+            <div class="setting-desc">Commits pod + media to your repo. Triggers a rebuild if you have a GitHub Actions workflow.</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn-save" id="github-push-btn">Push now</button>
+            <a class="btn btn-ghost btn-sm" href="/api/github/workflow" download title="Download GitHub Actions workflow file">⬇ Workflow</a>
+          </div>
+        </div>
+      </div>
+      ` : ''}
+
+      <!-- placeholder — Account moved to bottom -->
+
+      <!-- Appearance (full width) -->
+      <div class="settings-group">
+        <div class="group-header">Appearance</div>
+        <div style="padding:10px 20px;border-bottom:1px solid var(--line2)">
+          <div class="setting-label" style="margin-bottom:8px">Color scheme</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost btn-sm scheme-btn ${currentScheme==='auto'?'active':''}" data-s="auto">Auto (system)</button>
+            <button class="btn btn-ghost btn-sm scheme-btn ${currentScheme==='dark'?'active':''}" data-s="dark">● Dark</button>
+            <button class="btn btn-ghost btn-sm scheme-btn ${currentScheme==='light'?'active':''}" data-s="light">○ Light</button>
+          </div>
+        </div>
+        <div style="padding:10px 20px">
+          <div class="setting-label" style="margin-bottom:8px">Palette</div>
+          <div class="theme-cards">
+            <button class="theme-card ${currentTheme==='space'?'active':''}" data-theme="space">
+              <div class="theme-swatch">
+                <span style="background:#080e18"></span>
+                <span style="background:#5088c0"></span>
+                <span style="background:#38c8a8"></span>
+                <span style="background:#2eb89a"></span>
+              </div>
+              <div class="theme-card-name">Space</div>
+              <div class="theme-card-sub">Space station · electric blue &amp; teal</div>
+            </button>
+            <button class="theme-card ${currentTheme==='zen'?'active':''}" data-theme="zen">
+              <div class="theme-swatch">
+                <span style="background:#0f0e10"></span>
+                <span style="background:#566070"></span>
+                <span style="background:#6b8c6e"></span>
+                <span style="background:#ad7575"></span>
+              </div>
+              <div class="theme-card-name">Zen</div>
+              <div class="theme-card-sub">Japandi · slate &amp; mauve</div>
+            </button>
+            <button class="theme-card ${currentTheme==='catppuccin'?'active':''}" data-theme="catppuccin">
+              <div class="theme-swatch">
+                <span style="background:#11111b"></span>
+                <span style="background:#cba6f7"></span>
+                <span style="background:#a6e3a1"></span>
+                <span style="background:#f9e2af"></span>
+              </div>
+              <div class="theme-card-name">Catppuccin</div>
+              <div class="theme-card-sub">Mocha / Latte · pastel</div>
+            </button>
+            <button class="theme-card ${currentTheme==='amber'?'active':''}" data-theme="amber">
+              <div class="theme-swatch">
+                <span style="background:#0b0a07"></span>
+                <span style="background:#ffb000"></span>
+                <span style="background:#8fcf6a"></span>
+                <span style="background:#ff7a3d"></span>
+              </div>
+              <div class="theme-card-name">Terminal</div>
+              <div class="theme-card-sub">Amber phosphor · Paper in light</div>
+            </button>
+          </div>
+        </div>
+        <div style="padding:10px 20px;border-top:1px solid var(--line2)">
+          <div class="setting-label" style="margin-bottom:8px">Style</div>
+          <div class="style-cards">
+            <button class="style-card ${currentStyle==='classic'?'active':''}" data-style="classic">
+              <div class="style-preview">
+                <div class="sp-sidebar"></div>
+                <div class="sp-body">
+                  <div class="sp-row"></div>
+                  <div class="sp-row sp-row-short"></div>
+                  <div class="sp-row"></div>
+                </div>
+              </div>
+              <div class="theme-card-name">Classic</div>
+              <div class="theme-card-sub">Clean · flat panels</div>
+            </button>
+            <button class="style-card ${currentStyle==='glass'?'active':''}" data-style="glass">
+              <div class="style-preview sp-glass">
+                <div class="sp-orb sp-orb1"></div>
+                <div class="sp-orb sp-orb2"></div>
+                <div class="sp-sidebar sp-glass-panel"></div>
+                <div class="sp-body">
+                  <div class="sp-row sp-glass-panel"></div>
+                  <div class="sp-row sp-row-short sp-glass-panel"></div>
+                </div>
+              </div>
+              <div class="theme-card-name">Glass</div>
+              <div class="theme-card-sub">Glassmorphism · blur</div>
+            </button>
+            <button class="style-card ${currentStyle==='xfce'?'active':''}" data-style="xfce">
+              <div class="style-preview sp-glass" style="position:relative;overflow:hidden;">
+                <div class="sp-orb sp-orb1"></div>
+                <div class="sp-orb sp-orb2"></div>
+                <div style="position:absolute;top:0;left:0;right:0;height:12%;background:color-mix(in srgb,var(--bg2) 60%,transparent);border-bottom:1px solid var(--line);"></div>
+                <div class="sp-body" style="margin:0;padding:8% 5% 25%;">
+                  <div class="sp-row sp-glass-panel"></div>
+                  <div class="sp-row sp-row-short sp-glass-panel"></div>
+                  <div class="sp-row sp-glass-panel"></div>
+                </div>
+                <div style="position:absolute;bottom:4%;left:50%;transform:translateX(-50%);background:color-mix(in srgb,var(--bg2) 60%,transparent);border:1px solid var(--accent);border-radius:8px;padding:3px 8px;display:flex;gap:4px;align-items:center;">
+                  <span style="width:6px;height:6px;background:var(--accent);border-radius:50%;display:block;"></span>
+                  <span style="width:6px;height:6px;background:var(--muted);border-radius:50%;display:block;"></span>
+                  <span style="width:6px;height:6px;background:var(--gold);border-radius:50%;display:block;"></span>
+                  <span style="width:6px;height:6px;background:var(--muted);border-radius:50%;display:block;"></span>
+                </div>
+              </div>
+              <div class="theme-card-name">Station</div>
+              <div class="theme-card-sub">Dock · no sidebar</div>
+            </button>
+          </div>
+        </div>
+        <div style="padding:10px 20px;border-top:1px solid var(--line2)">
+          <div class="setting-label" style="margin-bottom:8px">UI Zoom</div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <input type="range" id="ui-zoom-slider" min="85" max="130" step="5" value="${localStorage.getItem('orb_ui_zoom')||'100'}" style="flex:1;accent-color:var(--accent);" />
+            <span id="ui-zoom-val" style="font-family:var(--mono);font-size:11px;color:var(--text);min-width:36px;text-align:right">${localStorage.getItem('orb_ui_zoom')||'100'}%</span>
+            <button class="btn btn-ghost btn-sm" id="ui-zoom-reset" style="font-size:9px">Reset</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Account (bottom) -->
+      <div id="account-banner" class="banner" style="display:none"></div>
+      <div class="settings-grid" style="margin-bottom:8px">
+      <div class="settings-group">
+        <div class="group-header">Account — ${me.user.username}</div>
+        <form id="pw-form">
+          <div class="setting-row">
+            <div><div class="setting-label">Current password</div></div>
+            <input class="input" type="password" name="current_password" autocomplete="current-password" required />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">New password</div><div class="setting-desc">Minimum 8 characters</div></div>
+            <input class="input" type="password" name="new_password" autocomplete="new-password" required minlength="8" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Confirm new password</div></div>
+            <input class="input" type="password" name="confirm_password" autocomplete="new-password" required />
+          </div>
+          <div class="save-row">
+            <button type="submit" class="btn-save">Change password</button>
+          </div>
+        </form>
+        <form id="un-form" style="border-top:1px solid var(--line);">
+          <div class="setting-row">
+            <div><div class="setting-label">New username</div><div class="setting-desc">Current: <strong>${me.user.username}</strong></div></div>
+            <input class="input" type="text" name="new_username" autocomplete="username" required placeholder="${me.user.username}" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Confirm with password</div></div>
+            <input class="input" type="password" name="current_password" autocomplete="current-password" required />
+          </div>
+          <div class="save-row">
+            <button type="submit" class="btn-save">Change username</button>
+          </div>
+        </form>
+      </div>
+      </div><!-- /settings-grid account -->
+
+      <!-- Pod — full width, detailed -->
+      <div class="settings-group" id="pod-info-group">
+        <div class="group-header">Pod</div>
+        <div id="pod-stats-strip" style="display:flex;gap:32px;padding:10px 20px;border-bottom:1px solid var(--line2);flex-wrap:wrap;align-items:flex-start">
+          <div><div class="pod-stat-label">Path</div><div class="pod-meta-path" id="pod-path-field">…</div></div>
+          <div><div class="pod-stat-label">Pod version</div><span class="pod-meta-ver" id="pod-version-field">—</span></div>
+          <div><div class="pod-stat-label">Admin version</div><span class="pod-meta-ver" id="pod-admin-ver">—</span></div>
+          <div><div class="pod-stat-label">Uptime</div><span class="pod-meta-ver" id="pod-uptime">—</span></div>
+        </div>
+        <div style="padding:6px 20px;border-bottom:1px solid var(--line);font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;justify-content:space-between">
+          <span style="display:flex;align-items:center;gap:6px"><span style="font-size:4px;color:var(--gold)">◆</span>Collections &amp; Navigation</span>
+          <span style="font-size:9px;color:var(--muted);letter-spacing:0;text-transform:none">Toggle visibility · assign groups</span>
+        </div>
+        <div id="pod-collections-list">
+          <div class="pod-col-row"><span class="pod-col-name" style="color:var(--muted)">Loading…</span></div>
+        </div>
+        <div style="padding:8px 20px;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <div style="display:flex;gap:16px">
+            <span style="font-family:var(--mono);font-size:10px;color:var(--muted)"><span id="pod-col-count">—</span> collections</span>
+            <span style="font-family:var(--mono);font-size:10px;color:var(--muted)"><span id="pod-total-entries">—</span> entries total</span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input class="input" type="text" id="nav-new-group" placeholder="New group name…" style="width:140px;font-size:10px;padding:4px 8px;" />
+            <button type="button" class="btn btn-ghost btn-sm" id="nav-add-group-btn">+ Group</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="nav-save-btn">Save nav</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="save-row">
+        <button type="submit" form="site-form" class="btn-save">Save settings</button>
+      </div>
+
+      <!-- Support widget -->
+      <div class="support-widget">
+        <div class="support-copy">
+          <div class="support-copy-label">Support</div>
+          <div class="support-copy-text">Orbiter is open source and free to use.<br>If it saves you time, consider supporting development.</div>
+        </div>
+        <a href="https://polar.sh/a83" class="btn-support" target="_blank" rel="noopener">Support on Polar →</a>
+      </div>
+    `;
+
+    // Media backend: show/hide conditional fields
+    function updateMediaFields() {
+      const v = document.getElementById('media-backend-select')?.value ?? 'blob';
+      document.getElementById('media-local-fields').style.display  = v === 'local'  ? '' : 'none';
+      document.getElementById('media-s3-fields').style.display     = v === 's3'     ? '' : 'none';
+      document.getElementById('media-github-fields').style.display = v === 'github' ? '' : 'none';
+    }
+    document.getElementById('media-backend-select')?.addEventListener('change', updateMediaFields);
+    updateMediaFields();
+
+    // Preview URLs — populate one row per collection
+    (async () => {
+      const rows = document.getElementById('preview-url-rows');
+      if (!rows) return;
+      try {
+        const cols = await fetch('/api/collections', { credentials: 'include' }).then(r => r.json());
+        if (!cols.length) { rows.innerHTML = '<div style="padding:10px 20px;font-size:11px;color:var(--muted)">No collections yet</div>'; return; }
+        const urlMetas = await Promise.all(
+          cols.map(col => fetch(`/api/meta/preview_url~${col.id}`, { credentials: 'include' }).then(r => r.json()).catch(() => ({})))
+        );
+        rows.innerHTML = cols.map((col, i) => {
+          const val = (urlMetas[i]?.value ?? '').replace(/"/g, '&quot;');
+          return `<div class="setting-row">
+            <div><div class="setting-label" style="font-family:var(--mono);font-size:11px">${col.id}</div></div>
+            <input class="input" data-preview-url-col="${col.id}" value="${val}" placeholder="http://localhost:4321/blog/{slug}" style="flex:1;max-width:380px" />
+          </div>`;
+        }).join('');
+      } catch {
+        rows.innerHTML = '<div style="padding:10px 20px;font-size:11px;color:var(--muted)">Could not load collections</div>';
+      }
+    })();
+
+    // Site form
+    document.getElementById('site-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      await saveMeta([
+        ['site.name',           fd.get('site.name')],
+        ['site.url',            fd.get('site.url')],
+        ['site.description',    fd.get('site.description')],
+        ['site.locale',         fd.get('site.locale')],
+        ['site.locales',        fd.get('site.locales')],
+        ['build.webhook_url',   fd.get('build.webhook_url')],
+        ['github.token',        fd.get('github.token')],
+        ['github.repo',         fd.get('github.repo')],
+        ['github.branch',       fd.get('github.branch')],
+        ['media.backend',       fd.get('media.backend')],
+        ['media.local_path',    fd.get('media.local_path')],
+        ['media.github_token',  fd.get('media.github_token')],
+        ['media.github_repo',   fd.get('media.github_repo')],
+        ['media.github_branch', fd.get('media.github_branch')],
+        ['media.github_dir',    fd.get('media.github_dir')],
+        ['media.s3_bucket',     fd.get('media.s3_bucket')],
+        ['media.s3_region',     fd.get('media.s3_region')],
+        ['media.s3_endpoint',   fd.get('media.s3_endpoint')],
+        ['media.s3_access_key', fd.get('media.s3_access_key')],
+        ['media.s3_secret_key', fd.get('media.s3_secret_key')],
+        ['media.s3_public_url', fd.get('media.s3_public_url')],
+        ['api.enabled',              fd.get('api.enabled') ? '1' : '0'],
+        ['workflow.review',          fd.get('workflow.review') ? '1' : '0'],
+        ['api.token',                fd.get('api.token')],
+        ['public.collections',       fd.get('public.collections')],
+        ['api.requireKey',           fd.get('api.requireKey') ? '1' : '0'],
+        ['preview.token',            document.getElementById('preview-token-display').value || null],
+        ['media.img_max_width',      fd.get('media.img_max_width')],
+        ['media.img_quality',        fd.get('media.img_quality')],
+        ['media.img_convert_webp',   fd.get('media.img_convert_webp') ? '1' : '0'],
+        ['email.smtp_host',          fd.get('email.smtp_host')],
+        ['email.smtp_port',          fd.get('email.smtp_port')],
+        ['email.smtp_user',          fd.get('email.smtp_user')],
+        ['email.smtp_pass',          fd.get('email.smtp_pass')],
+        ['email.smtp_from',          fd.get('email.smtp_from')],
+        ['email.notify_to',          fd.get('email.notify_to')],
+        ['email.notify_publish',     fd.get('email.notify_publish') ? '1' : '0'],
+        ['email.notify_comment',     fd.get('email.notify_comment') ? '1' : '0'],
+        ['email.notify_form',        fd.get('email.notify_form') ? '1' : '0'],
+        ['ftp.host',        fd.get('ftp.host')],
+        ['ftp.port',        fd.get('ftp.port')],
+        ['ftp.user',        fd.get('ftp.user')],
+        ['ftp.password',    fd.get('ftp.password')],
+        ['ftp.secure',      fd.get('ftp.secure') ? '1' : '0'],
+        ['ftp.remote_path', fd.get('ftp.remote_path')],
+        ['ftp.local_path',  fd.get('ftp.local_path')],
+        ['ftp.auto_deploy', fd.get('ftp.auto_deploy') ? '1' : '0'],
+        ['ai.provider',    fd.get('ai.provider') || 'ollama'],
+        ['ai.model',       fd.get('ai.model') || ''],
+        ['ai.api_key',     fd.get('ai.api_key') || ''],
+        ['ai.ollama_url',  fd.get('ai.ollama_url') || ''],
+        ['dashboard.show_calendar',    fd.get('dashboard.show_calendar') ? '1' : '0'],
+        ['dashboard.show_recent',      fd.get('dashboard.show_recent') ? '1' : '0'],
+        ['dashboard.show_collections', fd.get('dashboard.show_collections') ? '1' : '0'],
+        ['dashboard.show_workspace',   fd.get('dashboard.show_workspace') ? '1' : '0'],
+        // dynamic preview URLs per collection
+        ...Array.from(document.querySelectorAll('[data-preview-url-col]')).map(el => [
+          `preview_url.${el.dataset.previewUrlCol}`, el.value || null
+        ]),
+      ]);
+      showBanner('site-banner','banner-ok','Settings saved');
+      const msg = document.getElementById('header-save-msg');
+      if (msg) { msg.textContent = '✓ Saved'; msg.style.opacity = '1'; setTimeout(() => msg.style.opacity = '0', 2500); }
+    });
+
+    // Preview token generator
+    // API Keys
+    const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    async function renderApiKeys() {
+      const list = document.getElementById('api-keys-list');
+      if (!list) return;
+      const res = await fetch('/api/api-keys', { credentials: 'include' }).catch(() => null);
+      if (!res?.ok) { list.innerHTML = '<span style="color:var(--muted)">Could not load keys</span>'; return; }
+      const { keys } = await res.json();
+      if (!keys.length) { list.innerHTML = '<span style="color:var(--muted)">No keys yet</span>'; return; }
+      list.innerHTML = keys.map(k => `
+        <div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:var(--panel-alt,var(--sidebar-bg));border-radius:6px;border:1px solid var(--line)">
+          <span style="flex:1;font-family:var(--mono);font-size:10px;color:var(--heading)">${esc(k.label)}${k.scope==='draft-write'?' <span style="color:var(--gold)" title="Can create and edit drafts over MCP (never publish)">· drafts</span>':''}${k.collections?` <span style="color:var(--muted)" title="Limited to these collections">· ${esc(k.collections.join(', '))}</span>`:''}${k.expires?` <span style="color:${k.expires < new Date().toISOString().slice(0,10) ? 'var(--red)' : 'var(--muted)'}">· ${k.expires < new Date().toISOString().slice(0,10) ? 'expired' : 'until'} ${esc(k.expires)}</span>`:''}${k.rateLimit?` <span style="color:var(--muted)">· ${esc(k.rateLimit)}/min</span>`:''}</span>
+          <span style="font-family:var(--mono);font-size:9px;color:var(--muted)">${k.key}</span>
+          <span style="font-size:9px;color:var(--muted)">${k.hits} hits</span>
+          <span style="font-size:9px;color:var(--muted)">${k.created}</span>
+          <button type="button" class="btn btn-ghost btn-sm" style="color:var(--red,#c03848)" data-key-id="${k.id}">Revoke</button>
+        </div>`).join('');
+      list.querySelectorAll('[data-key-id]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Revoke this API key?')) return;
+          await fetch(`/api/api-keys/${btn.dataset.keyId}`, { method: 'DELETE', credentials: 'include' });
+          renderApiKeys();
+        });
+      });
+    }
+    renderApiKeys();
+
+    document.getElementById('btn-gen-api-key')?.addEventListener('click', () => {
+      const dlg = document.createElement('dialog');
+      dlg.style.cssText = 'background:var(--bg1);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:20px;max-width:420px;width:92vw';
+      dlg.innerHTML = `
+        <form method="dialog" style="display:flex;flex-direction:column;gap:12px;font-size:12px">
+          <div class="setting-label" style="font-size:14px">New API key</div>
+          <label>Label<input class="input" name="label" placeholder="Frontend, Mobile app, Claude agent …" /></label>
+          <label>Access
+            <select class="input" name="scope">
+              <option value="read">Read only</option>
+              <option value="draft-write">Read + create/edit drafts over MCP (never publish)</option>
+            </select>
+          </label>
+          <label>Only these collections <span style="color:var(--muted)">(comma-separated, empty = all)</span><input class="input" name="collections" placeholder="posts, pages" /></label>
+          <label>Expires <span style="color:var(--muted)">(optional)</span><input class="input" type="date" name="expires" /></label>
+          <label>Rate limit <span style="color:var(--muted)">(requests per minute, optional)</span><input class="input" type="number" min="1" max="100000" name="rateLimit" /></label>
+          <div id="key-dlg-err" style="color:var(--red);display:none"></div>
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button type="button" class="btn btn-ghost btn-sm" id="key-dlg-cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary btn-sm" value="ok">Create key</button>
+          </div>
+        </form>`;
+      document.body.appendChild(dlg);
+      dlg.querySelector('#key-dlg-cancel').addEventListener('click', () => dlg.close());
+      dlg.addEventListener('close', () => dlg.remove());
+      dlg.querySelector('form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const f = Object.fromEntries(new FormData(e.target));
+        const res = await fetch('/api/api-keys', {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            label: f.label || 'API Key',
+            scope: f.scope,
+            collections: f.collections.split(',').map(x => x.trim()).filter(Boolean),
+            expires: f.expires || undefined,
+            rateLimit: f.rateLimit || undefined,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          const er = dlg.querySelector('#key-dlg-err'); er.textContent = data.error || 'Could not create key'; er.style.display = ''; return;
+        }
+        dlg.close();
+        prompt('New API key (copy it now — shown once):\n', data.key.key);
+        renderApiKeys();
+      });
+      dlg.showModal();
+      dlg.querySelector('[name=label]').focus();
+    });
+
+    // Webhooks
+    async function renderWebhooks() {
+      const list = document.getElementById('webhooks-list');
+      if (!list) return;
+      const res = await fetch('/api/webhooks', { credentials: 'include' }).catch(() => null);
+      if (!res?.ok) { list.textContent = 'Could not load webhooks'; return; }
+      const { hooks, log } = await res.json();
+      list.innerHTML = hooks.length ? hooks.map(h => `
+        <div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:var(--panel-alt,var(--sidebar-bg));border-radius:6px;border:1px solid var(--line)">
+          <span style="flex:1;font-family:var(--mono);font-size:10px;color:var(--heading);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(h.url)}">${esc(h.url)}</span>
+          <span style="font-size:9px;color:var(--muted)">${esc(h.events.join(', '))}</span>
+          <span style="font-size:9px;color:${h.signed ? 'var(--jade)' : 'var(--gold)'}" title="${h.signed ? 'Payloads carry an HMAC signature' : 'Created before signing existed — delete and re-add to get a secret'}">${h.signed ? 'signed' : 'unsigned'}</span>
+          <button type="button" class="btn btn-ghost btn-sm" data-wh-test="${esc(h.id)}">Test</button>
+          <button type="button" class="btn btn-ghost btn-sm" style="color:var(--red,#c03848)" data-wh-del="${esc(h.id)}">Remove</button>
+        </div>`).join('') : 'No webhooks yet';
+      list.querySelectorAll('[data-wh-del]').forEach(b => b.addEventListener('click', async () => {
+        if (!confirm('Remove this webhook?')) return;
+        await fetch('/api/webhooks/' + b.dataset.whDel, { method: 'DELETE', credentials: 'include' });
+        renderWebhooks();
+      }));
+      list.querySelectorAll('[data-wh-test]').forEach(b => b.addEventListener('click', async () => {
+        b.disabled = true; b.textContent = '…';
+        const r = await fetch('/api/webhooks/' + b.dataset.whTest + '/test', { method: 'POST', credentials: 'include' }).then(x => x.json()).catch(() => ({ error: 'Network error' }));
+        alert(r.ok ? `Delivered (HTTP ${r.status}).` : `Failed: ${r.error || 'HTTP ' + r.status}`);
+        renderWebhooks();
+      }));
+      document.getElementById('webhooks-log').innerHTML = log.length
+        ? log.slice(0, 15).map(l => `<div style="color:${l.ok ? 'var(--jade)' : 'var(--red)'}">${esc(l.ts.slice(0,19).replace('T',' '))} · ${esc(l.event)} · ${l.ok ? 'OK' : esc(l.error || 'HTTP ' + l.status)} · try ${l.attempt} · ${esc(l.url)}</div>`).join('')
+        : 'No deliveries yet';
+    }
+    renderWebhooks();
+    document.getElementById('btn-add-webhook')?.addEventListener('click', async () => {
+      const url = prompt('Webhook URL (https://…):');
+      if (!url) return;
+      const res = await fetch('/api/webhooks', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, events: ['publish', 'delete'] }),
+      });
+      const data = await res.json();
+      if (!res.ok) return alert(data.error || 'Could not add webhook');
+      prompt('Signing secret (copy it now — shown once). Use it to verify X-Orbiter-Signature:', data.secret);
+      renderWebhooks();
+    });
+
+    document.getElementById('btn-gen-preview-token')?.addEventListener('click', async () => {
+      const token = Array.from(crypto.getRandomValues(new Uint8Array(24))).map(b=>b.toString(16).padStart(2,'0')).join('');
+      document.getElementById('preview-token-display').value = token;
+      await fetch('/api/meta/preview.token', {
+        method: 'PUT', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: token }),
+      });
+    });
+
+    // GitHub push (conditional: only wired if section rendered)
+    const ghPushBtn = document.getElementById('github-push-btn');
+    if (ghPushBtn) ghPushBtn.addEventListener('click', async () => {
+      ghPushBtn.disabled = true;
+      ghPushBtn.textContent = 'Pushing…';
+      const res  = await fetch('/api/github/push', { method:'POST', credentials:'include' });
+      const json = await res.json();
+      showBanner('github-banner', json.ok ? 'banner-ok' : 'banner-err', json.message ?? (json.ok ? 'Pushed' : 'Push failed'));
+      ghPushBtn.textContent = 'Push now';
+      ghPushBtn.disabled = false;
+    });
+
+    // Palette cards
+    document.querySelectorAll('.theme-card').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const theme = btn.dataset.theme;
+        document.querySelectorAll('.theme-card').forEach(b => b.classList.toggle('active', b.dataset.theme === theme));
+        const root = document.documentElement;
+        if (theme === 'space') root.removeAttribute('data-theme');
+        else root.setAttribute('data-theme', theme);
+        localStorage.setItem('orb_theme', theme);
+        await saveMeta([['ui.theme', theme]]);
+      });
+    });
+
+    // Scheme buttons
+    document.querySelectorAll('.scheme-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const s = btn.dataset.s;
+        document.querySelectorAll('.scheme-btn').forEach(b => b.classList.toggle('active', b.dataset.s === s));
+        const root = document.documentElement;
+        root.removeAttribute('data-scheme');
+        if (s === 'dark')  root.setAttribute('data-scheme', 'dark');
+        if (s === 'light') root.setAttribute('data-scheme', 'light');
+        localStorage.setItem('orb_scheme', s);
+        // Update topbar toggle icon
+        const t = document.getElementById('scheme-toggle');
+        if (t) t.textContent = s === 'dark' ? '●' : s === 'light' ? '○' : '◐';
+      });
+    });
+
+    // Style cards (classic / glass)
+    document.querySelectorAll('.style-card').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const s = btn.dataset.style;
+        const wasXfce = (localStorage.getItem('orb_style') || 'glass') === 'xfce';
+        document.querySelectorAll('.style-card').forEach(b => b.classList.toggle('active', b.dataset.style === s));
+        const root = document.documentElement;
+        root.removeAttribute('data-style');
+        if (s === 'glass' || s === 'xfce') root.setAttribute('data-style', s);
+        localStorage.setItem('orb_style', s);
+        // entering or leaving xfce needs a reload (the dock is injected DOM)
+        if (s === 'xfce' || wasXfce) {
+          location.reload();
+        }
+      });
+    });
+
+    // UI Zoom — no live preview (causes layout jump), value shown, applied on next page load
+    const zoomSlider = document.getElementById('ui-zoom-slider');
+    const zoomVal = document.getElementById('ui-zoom-val');
+    if (zoomSlider) {
+      zoomSlider.addEventListener('input', () => {
+        zoomVal.textContent = zoomSlider.value + '%';
+      });
+      zoomSlider.addEventListener('change', () => {
+        localStorage.setItem('orb_ui_zoom', zoomSlider.value);
+        zoomVal.textContent = zoomSlider.value + '% — applies on next page';
+      });
+      document.getElementById('ui-zoom-reset')?.addEventListener('click', () => {
+        zoomSlider.value = '100';
+        zoomVal.textContent = '100%';
+        localStorage.setItem('orb_ui_zoom', '100');
+        document.documentElement.style.zoom = '';
+      });
+    }
+
+    // AI provider hint + conditional fields
+    const AI_HINTS = {
+      gemini: '★ <strong>Free tier</strong>: 15 requests/min, 1M tokens/month. Get a key at <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com/apikey</a> — no credit card needed.',
+      ollama: '100% local, 100% free. Install: <code style="font-size:10px;background:var(--bg3);padding:1px 5px;border-radius:3px">brew install ollama && ollama pull llama3.2</code> then <code style="font-size:10px;background:var(--bg3);padding:1px 5px;border-radius:3px">ollama serve</code>',
+      anthropic: 'Requires API key from <a href="https://console.anthropic.com/" target="_blank" style="color:var(--accent)">console.anthropic.com</a>. Pay-per-use.',
+      openai: 'Requires API key from <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--accent)">platform.openai.com</a>. Pay-per-use.',
+    };
+    const AI_PLACEHOLDERS = { gemini: 'gemini-2.5-flash', ollama: 'llama3.2', anthropic: 'claude-sonnet-4-20250514', openai: 'gpt-4o-mini' };
+    const AI_KEY_URLS = {
+      gemini: 'https://aistudio.google.com/apikey',
+      anthropic: 'https://console.anthropic.com/settings/keys',
+      openai: 'https://platform.openai.com/api-keys',
+    };
+    const AI_KEY_LABELS = { gemini: '↗ Get free key', anthropic: '↗ Get key', openai: '↗ Get key' };
+    function updateAiFields() {
+      const p = document.getElementById('ai-provider-select')?.value || 'ollama';
+      const hint = document.getElementById('ai-hint');
+      if (hint) hint.innerHTML = AI_HINTS[p] || '';
+      const keyRow = document.getElementById('ai-key-row');
+      const ollamaRow = document.getElementById('ai-ollama-row');
+      if (keyRow) keyRow.style.display = p === 'ollama' ? 'none' : '';
+      if (ollamaRow) ollamaRow.style.display = p === 'ollama' ? '' : 'none';
+      const modelInp = document.querySelector('[name="ai.model"]');
+      if (modelInp) {
+        modelInp.placeholder = AI_PLACEHOLDERS[p] || '';
+      }
+      const keyBtn = document.getElementById('ai-get-key-btn');
+      if (keyBtn) {
+        if (AI_KEY_URLS[p]) { keyBtn.href = AI_KEY_URLS[p]; keyBtn.textContent = AI_KEY_LABELS[p]; keyBtn.style.display = ''; }
+        else keyBtn.style.display = 'none';
+      }
+    }
+    document.getElementById('ai-provider-select')?.addEventListener('change', () => {
+      const modelInp = document.querySelector('[name="ai.model"]');
+      if (modelInp) modelInp.value = '';
+      updateAiFields();
+    });
+    updateAiFields();
+
+    // FTP test connection
+    document.getElementById('ftp-test-btn')?.addEventListener('click', async () => {
+      const btn = document.getElementById('ftp-test-btn');
+      const res = document.getElementById('ftp-test-result');
+      btn.disabled = true; btn.textContent = 'Testing…'; res.textContent = '';
+      const r = await fetch('/api/deploy/ftp/test', { method: 'POST', credentials: 'include' });
+      const j = await r.json();
+      btn.disabled = false; btn.textContent = 'Test connection';
+      if (r.ok) { res.style.color = 'var(--jade)'; res.textContent = `✓ Connected — ${j.files} files in ${j.path}`; }
+      else       { res.style.color = 'var(--red)';  res.textContent = `✕ ${j.error}`; }
+    });
+
+    // Password form (with confirm validation)
+    document.getElementById('pw-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const fd  = new FormData(e.target);
+      if (fd.get('new_password') !== fd.get('confirm_password')) {
+        showBanner('account-banner','banner-err','Passwords do not match'); return;
+      }
+      const res = await fetch('/api/account/password', {
+        method:'PUT', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ currentPassword: fd.get('current_password'), newPassword: fd.get('new_password') }),
+      });
+      const json = await res.json();
+      if (res.ok) { showBanner('account-banner','banner-ok','Password changed'); e.target.reset(); }
+      else showBanner('account-banner','banner-err', json.error ?? 'Failed');
+    });
+
+    // Username form
+    document.getElementById('un-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const fd  = new FormData(e.target);
+      const res = await fetch('/api/account/username', {
+        method:'PUT', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ currentPassword: fd.get('current_password'), newUsername: fd.get('new_username') }),
+      });
+      const json = await res.json();
+      if (res.ok) { showBanner('account-banner','banner-ok','Username changed — please sign in again'); setTimeout(()=>location.replace('/login.html'), 1500); }
+      else showBanner('account-banner','banner-err', json.error ?? 'Failed');
+    });
+
+    // Language buttons
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === btn.dataset.lang));
+        localStorage.setItem('orb_lang', btn.dataset.lang);
+      });
+    });
+
+    // Pod info + health
+    const [info, health] = await Promise.all([
+      fetch('/api/info',  { credentials:'include' }).then(r => r.json()).catch(() => ({})),
+      fetch('/health',    { credentials:'include' }).then(r => r.json()).catch(() => ({})),
+    ]);
+
+    const pf = document.getElementById('pod-path-field');
+    const vf = document.getElementById('pod-version-field');
+    const av = document.getElementById('pod-admin-ver');
+    const up = document.getElementById('pod-uptime');
+    const cl = document.getElementById('pod-collections-list');
+    const tc = document.getElementById('pod-total-entries');
+    const cc = document.getElementById('pod-col-count');
+
+    if (pf) pf.textContent = info.podPath ?? health.pod ?? '—';
+    if (vf) vf.textContent = `v${info.formatVersion ?? 1}`;
+    if (av) av.textContent = health.version ? `v${health.version}` : '—';
+    if (up && health.uptime != null) {
+      const s = health.uptime, h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
+      up.textContent = h > 0 ? `${h}h ${m}m` : `${m}m`;
+    }
+
+    // Nav config state
+    const navHiddenSet = new Set((info.nav?.hidden) || []);
+    let navGroupsObj = info.nav?.groups || {};
+    if (typeof navGroupsObj !== 'object' || navGroupsObj === null) navGroupsObj = {};
+    const existingGroupNames = () => Object.keys(navGroupsObj);
+    const colGroupOf = (colId) => {
+      for (const [g, ids] of Object.entries(navGroupsObj)) {
+        if (Array.isArray(ids) && ids.includes(colId)) return g;
+      }
+      return '';
+    };
+
+    if (cl) {
+      const cols = info.collections ?? [];
+      const total = cols.reduce((n, c) => n + (c.total ?? 0), 0);
+      if (tc) tc.textContent = total;
+      if (cc) cc.textContent = cols.length;
+
+      function renderNavColList() {
+        const groups = existingGroupNames();
+        cl.innerHTML = cols.length
+          ? cols.map(c => {
+              const hidden = navHiddenSet.has(c.id);
+              const group  = colGroupOf(c.id);
+              return `<div class="pod-col-row" style="gap:8px">
+                <label class="toggle" style="flex-shrink:0" title="${hidden ? 'Hidden' : 'Visible'}">
+                  <input type="checkbox" class="nav-vis-cb" data-col="${c.id}" ${hidden ? '' : 'checked'} />
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="pod-col-name" style="flex:1;${hidden ? 'opacity:.4' : ''}">${c.label}</span>
+                <select class="input nav-group-sel" data-col="${c.id}" style="width:auto;min-width:90px;font-size:10px;padding:3px 6px;">
+                  <option value="">— no group —</option>
+                  ${groups.map(g => `<option value="${g}" ${group===g?'selected':''}>${g}</option>`).join('')}
+                </select>
+                <span class="pod-col-count">${c.total ?? 0}</span>
+              </div>`;
+            }).join('')
+          : '<div class="pod-col-row"><span class="pod-col-name" style="color:var(--muted)">No collections</span></div>';
+
+        cl.querySelectorAll('.nav-vis-cb').forEach(cb => {
+          cb.addEventListener('change', () => {
+            if (cb.checked) navHiddenSet.delete(cb.dataset.col);
+            else navHiddenSet.add(cb.dataset.col);
+          });
+        });
+        cl.querySelectorAll('.nav-group-sel').forEach(sel => {
+          sel.addEventListener('change', () => {
+            const colId = sel.dataset.col;
+            for (const [g, ids] of Object.entries(navGroupsObj)) {
+              const idx = ids.indexOf(colId);
+              if (idx !== -1) ids.splice(idx, 1);
+            }
+            if (sel.value) {
+              if (!navGroupsObj[sel.value]) navGroupsObj[sel.value] = [];
+              navGroupsObj[sel.value].push(colId);
+            }
+          });
+        });
+      }
+      renderNavColList();
+
+      document.getElementById('nav-add-group-btn')?.addEventListener('click', () => {
+        const inp = document.getElementById('nav-new-group');
+        const name = inp?.value.trim();
+        if (!name) return;
+        if (!navGroupsObj[name]) navGroupsObj[name] = [];
+        inp.value = '';
+        renderNavColList();
+      });
+
+      document.getElementById('nav-save-btn')?.addEventListener('click', async () => {
+        const cleanGroups = {};
+        for (const [g, ids] of Object.entries(navGroupsObj)) {
+          if (ids.length) cleanGroups[g] = ids;
+        }
+        await saveMeta([
+          ['nav.hidden', [...navHiddenSet].join(',')],
+          ['nav.groups', Object.keys(cleanGroups).length ? JSON.stringify(cleanGroups) : ''],
+        ]);
+        showBanner('site-banner', 'banner-ok', 'Navigation saved — reloading…');
+        setTimeout(() => location.reload(), 600);
+      });
+    }
+
+    // ── Templates ──────────────────────────────────────────────────────
+    function tplBanner(cls, text) {
+      const el = document.getElementById('tpl-banner');
+      if (!el) return;
+      el.className = 'banner ' + cls;
+      el.textContent = (cls === 'banner-ok' ? '✓ ' : '✕ ') + text;
+      el.style.display = '';
+      setTimeout(() => el.style.display = 'none', 5000);
+    }
+
+    // Available built-in templates
+    async function loadAvailableTemplates() {
+      const templates = await fetch('/api/templates/available', { credentials: 'include' }).then(r => r.json()).catch(() => []);
+      const wrap = document.getElementById('tpl-available');
+      if (!wrap) return;
+      wrap.innerHTML = templates.map(t => `
+        <button type="button" class="btn btn-ghost btn-sm tpl-install-btn" data-id="${t.id}"
+          ${t.installed ? 'disabled style="opacity:.5"' : ''}
+          title="${t.description}">
+          ${t.installed ? '✓ ' : t.partial ? '◐ ' : '+ '}${t.label}
+        </button>
+      `).join('');
+      wrap.querySelectorAll('.tpl-install-btn:not([disabled])').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          btn.disabled = true;
+          btn.textContent = 'Installing…';
+          const res = await fetch(`/api/templates/install/${btn.dataset.id}`, { method: 'POST', credentials: 'include' });
+          const json = await res.json();
+          if (res.ok) {
+            tplBanner('banner-ok', `Installed: ${json.created.join(', ')}${json.skipped.length ? ' (skipped: ' + json.skipped.join(', ') + ')' : ''} — ${json.entries} sample entries`);
+            btn.textContent = '✓ ' + btn.textContent.replace('Installing…', '').trim();
+          } else {
+            tplBanner('banner-err', json.error || 'Install failed');
+            btn.disabled = false;
+          }
+          loadAvailableTemplates();
+          // Refresh pod info + export checkboxes
+          refreshExportCols();
+        });
+      });
+    }
+
+    // Export: collection checkboxes
+    async function refreshExportCols() {
+      const cols = await fetch('/api/collections', { credentials: 'include' }).then(r => r.json()).catch(() => []);
+      const wrap = document.getElementById('tpl-export-cols');
+      if (!wrap) return;
+      wrap.innerHTML = cols.map(c => `
+        <label style="font-size:10px;display:flex;align-items:center;gap:4px;cursor:pointer;user-select:none;padding:3px 8px;border:1px solid var(--line);border-radius:4px;background:var(--bg0);transition:border-color .12s;">
+          <input type="checkbox" class="tpl-exp-cb" value="${c.id}" style="accent-color:var(--accent);width:12px;height:12px;" />
+          ${c.label}
+        </label>
+      `).join('');
+      const exportBtn = document.getElementById('tpl-export-btn');
+      wrap.querySelectorAll('.tpl-exp-cb').forEach(cb => {
+        cb.addEventListener('change', () => {
+          const any = wrap.querySelectorAll('.tpl-exp-cb:checked').length > 0;
+          exportBtn.disabled = !any;
+        });
+      });
+    }
+
+    // Export button
+    document.getElementById('tpl-export-btn')?.addEventListener('click', async () => {
+      const checked = [...document.querySelectorAll('.tpl-exp-cb:checked')].map(cb => cb.value);
+      if (!checked.length) return;
+      const includeEntries = document.getElementById('tpl-export-entries')?.checked ?? true;
+      const res = await fetch('/api/templates/export', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ collections: checked, includeSampleEntries: includeEntries }),
+      });
+      if (!res.ok) { tplBanner('banner-err', 'Export failed'); return; }
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url;
+      a.download = `${data.id}.orbiter-template.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      tplBanner('banner-ok', `Exported ${checked.length} collection(s)`);
+    });
+
+    // Import button
+    document.getElementById('tpl-import-btn')?.addEventListener('click', () => {
+      const fi = document.createElement('input');
+      fi.type = 'file';
+      fi.accept = '.json,.orbiter-template.json';
+      fi.onchange = async () => {
+        const file = fi.files[0];
+        if (!file) return;
+        const status = document.getElementById('tpl-import-status');
+        if (status) status.textContent = 'Importing…';
+        try {
+          const text = await file.text();
+          const template = JSON.parse(text);
+          if (!template.collections) throw new Error('Invalid template file');
+          const res = await fetch('/api/templates/import', {
+            method: 'POST', credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: text,
+          });
+          const json = await res.json();
+          if (res.ok) {
+            tplBanner('banner-ok', `Imported: ${json.created.join(', ') || 'none new'}${json.skipped.length ? ' (skipped: ' + json.skipped.join(', ') + ')' : ''} — ${json.entries} entries`);
+            if (status) status.textContent = '';
+            loadAvailableTemplates();
+            refreshExportCols();
+          } else {
+            tplBanner('banner-err', json.error || 'Import failed');
+            if (status) status.textContent = '';
+          }
+        } catch (e) {
+          tplBanner('banner-err', 'Invalid template file: ' + e.message);
+          if (status) status.textContent = '';
+        }
+      };
+      fi.click();
+    });
+
+    loadAvailableTemplates();
+    refreshExportCols();
+  </script>
+</main>
+  </div>
+
+  <script src="/search.js"></script>
+  <script src="/sidebar.js"></script>
+  <script src="/router.js"></script>
+</body>
+</html>

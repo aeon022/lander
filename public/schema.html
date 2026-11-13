@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orbiter Admin — Schema</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Space+Grotesk:wght@300;400;500;600&family=Noto+Serif+JP:wght@200;300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css" />
+  <script src="/theme.js"></script>
+  <style>
+    html,body,.app { height:100%; overflow:hidden; }
+    /* Override .main for schema — no padding, no scroll, split panels */
+    .main { padding:0 !important; overflow:hidden !important; display:grid !important; grid-template-columns:200px 1fr; }
+
+    .coll-panel { background:var(--bg1); border-right:1px solid var(--line); display:flex; flex-direction:column; overflow-y:auto; height:100%; }
+    .coll-panel-head { padding:14px 16px 10px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+    .coll-panel-title { font-size:9px; letter-spacing:0.28em; text-transform:uppercase; color:var(--muted); }
+    .btn-new-coll { font-size:20px; line-height:1; color:var(--gold); background:none; border:none; cursor:pointer; padding:0 2px; }
+    .coll-item { display:flex; align-items:center; justify-content:space-between; padding:9px 16px; font-size:11px; color:var(--mid); border-bottom:1px solid var(--line2); cursor:pointer; position:relative; transition:background .1s,color .1s; text-decoration:none; }
+    .coll-item:hover { background:var(--line2); color:var(--heading); }
+    .coll-item.active { background:var(--accent-bg); color:var(--heading); }
+    .coll-item.active::before { content:""; position:absolute; left:0; top:0; bottom:0; width:2px; background:var(--gold); }
+    .coll-count { font-size:9px; color:var(--muted); background:var(--bg3); border:1px solid var(--line); padding:1px 6px; border-radius:2px; }
+    .coll-empty { padding:24px 16px; font-size:10px; color:var(--muted); line-height:1.8; }
+
+    .editor-panel { padding:32px 40px; overflow-y:auto; height:100%; }
+    /* Station mode: there is no app shell with its own scroll area — the page scrolls, the dock and status bar stay fixed.
+       (Without this the document stayed overflow:hidden and everything under the dock was unreachable.) */
+    html[data-style="xfce"], html[data-style="xfce"] body { height:auto; overflow:visible; }
+    html[data-style="xfce"] .main { align-items:start; }
+    html[data-style="xfce"] .editor-panel { height:auto; overflow:visible; }
+    html[data-style="xfce"] .coll-panel { height:auto; align-self:start; position:sticky; top:calc(var(--sb-h, 26px) + 20px);
+      max-height:calc(100dvh - var(--sb-h, 26px) - var(--dock-h, 76px) - 56px); border-radius:14px; border:1px solid var(--line); }
+    .editor-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:300px; gap:14px; color:var(--muted); text-align:center; }
+    .editor-empty-icon { font-size:28px; opacity:.2; }
+    .editor-head { margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid var(--line); }
+    .editor-title { font-family:var(--serif); font-weight:200; font-size:24px; color:var(--heading); letter-spacing:0.04em; }
+    .editor-sub { font-size:10px; color:var(--muted); margin-top:4px; }
+    .meta-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px; }
+    .field-group { display:flex; flex-direction:column; gap:5px; }
+    .field-group label { font-size:10px; color:var(--muted); letter-spacing:0.06em; }
+    .field-id-hint { font-size:9px; color:var(--muted); margin-top:2px; }
+    .section-label { font-size:9px; letter-spacing:0.28em; text-transform:uppercase; color:var(--muted); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+    .section-label::before { content:"—"; color:var(--gold); }
+    .field-rows { background:var(--bg2); border:1px solid var(--line); margin-bottom:14px; border-radius:var(--radius); overflow:hidden; min-height:10px; }
+    .fld-drag { cursor:grab; color:var(--muted); opacity:0.4; font-size:13px; padding:0 4px; user-select:none; }
+    .fld-drag:hover { opacity:0.9; }
+    .fld-row-dragging { opacity:0.4; }
+    .fld-row-over { outline:2px solid var(--accent); outline-offset:-2px; }
+    .editor-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:20px 0 0; border-top:1px solid var(--line); margin-top:20px; }
+    .banner { padding:8px 16px; font-size:10px; display:flex; align-items:center; gap:6px; border-radius:var(--radius); margin-bottom:14px; }
+    .banner-ok::before  { content:"✓ "; }
+    .banner-err::before { content:"✕ "; }
+    .banner-ok  { background:var(--jade-bg); color:var(--jade); border:1px solid rgba(45,139,106,.2); }
+    .banner-err { background:rgba(139,38,53,.07); color:var(--red); border:1px solid rgba(139,38,53,.15); }
+    .delete-warn { font-size:10px; color:var(--muted); padding:10px 12px; background:var(--gold-bg); border:1px solid rgba(200,168,107,.2); margin-bottom:16px; line-height:1.7; border-radius:var(--radius); }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <a class="logo" href="/dashboard.html"><div class="logo-mark">OR</div>Orbiter</a>
+      <div class="topbar-right">
+        <button class="search-trigger" id="search-btn" title="Search (⌘K)">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          Search <kbd>⌘K</kbd>
+        </button>
+        <button class="scheme-toggle" id="scheme-toggle" title="Toggle scheme">◐</button>
+        <span class="user" id="topbar-user"></span>
+        <span class="logout" id="logout-btn">Sign out</span>
+      </div>
+    </header>
+    <nav class="sidebar">
+      <div class="nav-section">Content</div>
+      <a class="nav-item" href="/dashboard.html"><span class="nav-icon">◈</span>Dashboard</a>
+      <a class="nav-item" href="/collections.html"><span class="nav-icon">⊞</span>Collections</a>
+      <div class="nav-section">Assets</div>
+      <a class="nav-item" href="/media.html"><span class="nav-icon">⊟</span>Media</a>
+      <div class="nav-section">Tools</div>
+      <a class="nav-item" href="/inbox.html"><span class="nav-icon">✉</span>Inbox</a>
+      <a class="nav-item" href="/snippets.html"><span class="nav-icon">⌗</span>Snippets</a>
+
+      <div class="nav-section">System</div>
+      <a class="nav-item active" href="/schema.html"><span class="nav-icon">◈</span>Schema</a>
+      <a class="nav-item" href="/build.html"><span class="nav-icon">▲</span>Build</a>
+      <a class="nav-item" href="/settings.html"><span class="nav-icon">◎</span>Settings</a>
+      <a class="nav-item admin-only" href="/users.html" style="display:none"><span class="nav-icon">◉</span>Users</a>
+            <a class="nav-item admin-only" href="/pods.html" style="display:none"><span class="nav-icon">◈</span>Pods</a>
+      <div class="sidebar-footer">
+        <div class="pod-name" id="pod-name">content.pod</div>
+        <div class="pod-info" id="pod-info"></div>
+        <div class="pod-version" id="pod-version"></div>
+        <div class="pod-status"><span class="pod-dot"></span>pod synced</div>
+      </div>
+    </nav>
+    <div class="main" role="main"><h1 class="sr-only">Schema</h1>
+      <div class="coll-panel">
+        <div class="coll-panel-head">
+          <span class="coll-panel-title">Collections</span>
+          <button class="btn-new-coll" id="btn-new-coll" title="New collection">+</button>
+        </div>
+        <div id="coll-list"></div>
+      </div>
+      <div class="editor-panel" id="editor-panel">
+        <div class="editor-empty">
+          <div class="editor-empty-icon">◈</div>
+          <div style="font-size:11px;line-height:1.8;">Select a collection or create a new one</div>
+          <button class="btn btn-primary" id="btn-new-empty">+ New collection</button>
+        </div>
+      </div>
+  <script type="module">
+    const me = await fetch('/api/auth/me',{credentials:'include'}).then(r=>r.json()).catch(()=>null);
+    if (!me?.user) { location.replace('/login.html'); throw new Error('unauthenticated'); }
+    document.getElementById('topbar-user').textContent = me.user.username;
+    if (me.user.role==='admin') document.querySelectorAll('.admin-only').forEach(el=>el.style.display='');
+    document.getElementById('logout-btn').addEventListener('click',async()=>{
+      await fetch('/api/auth/logout',{method:'POST',credentials:'include'});
+      location.replace('/login.html');
+    });
+
+    const FIELD_TYPES = [
+      {value:'string',   label:'String — single line text'},
+      {value:'richtext', label:'Rich Text — block editor'},
+      {value:'boolean',  label:'Boolean — on / off toggle'},
+      {value:'date',     label:'Date'},
+      {value:'datetime', label:'Date & time'},
+      {value:'number',   label:'Number'},
+      {value:'url',      label:'URL'},
+      {value:'select',   label:'Select — dropdown'},
+      {value:'array',    label:'Array — tags, comma-separated'},
+      {value:'image',    label:'Image — media picker'},
+      {value:'file',     label:'File — PDF, document, download'},
+      {value:'table',    label:'Table — rows & columns, stored as JSON'},
+      {value:'relation', label:'Relation — link to collection'},
+      {value:'weekdays', label:'Weekdays'},
+    ];
+
+    let allColls = [];
+    let selectedId = null;
+
+    async function loadColls() {
+      allColls = await fetch('/api/collections',{credentials:'include'}).then(r=>r.json()).catch(()=>[]);
+      renderCollList();
+      if (selectedId) {
+        const col = allColls.find(c=>c.id===selectedId);
+        if (col) renderEditor(col); else { selectedId=null; renderEmpty(); }
+      }
+    }
+
+    function renderCollList() {
+      const list = document.getElementById('coll-list');
+      if (!allColls.length) {
+        list.innerHTML = '<div class="coll-empty">No collections yet.<br>Click + to create one.</div>';
+        return;
+      }
+      list.innerHTML = allColls.map(c=>`
+        <div class="coll-item ${c.id===selectedId?'active':''}" data-id="${c.id}">
+          <span>${escHtml(c.label)}</span>
+          <span class="coll-count">${c.total ?? 0}</span>
+        </div>
+      `).join('');
+      list.querySelectorAll('.coll-item').forEach(el=>el.addEventListener('click',()=>{
+        selectedId = el.dataset.id;
+        renderCollList();
+        const col = allColls.find(c=>c.id===selectedId);
+        if (col) renderEditor(col);
+      }));
+    }
+
+    function renderEmpty() {
+      document.getElementById('editor-panel').innerHTML = `
+        <div class="editor-empty">
+          <div class="editor-empty-icon">◈</div>
+          <div style="font-size:11px;line-height:1.8;">Select a collection or create a new one</div>
+          <button class="btn btn-primary" id="btn-new-empty">+ New collection</button>
+        </div>
+      `;
+      document.getElementById('btn-new-empty').addEventListener('click',()=>renderNewForm());
+    }
+
+    const S = {
+      row:   'display:grid;grid-template-columns:20px 1fr 260px;align-items:start;gap:16px;padding:14px 18px 14px 10px;border-bottom:1px solid var(--line2);background:var(--bg2);',
+      input: 'width:100%;background:var(--bg0);border:1px solid var(--line);padding:7px 9px;color:var(--heading);font-family:var(--mono);font-size:11px;outline:none;appearance:none;box-sizing:border-box;',
+      iKey:  'width:100%;background:var(--bg0);border:1px solid var(--line);padding:7px 9px;color:var(--heading);font-family:var(--mono);font-size:12px;outline:none;box-sizing:border-box;',
+      iLbl:  'width:100%;background:var(--bg0);border:1px solid var(--line);padding:6px 9px;color:var(--muted);font-family:var(--mono);font-size:10px;outline:none;box-sizing:border-box;',
+      reqW:  'display:flex;align-items:center;gap:6px;cursor:pointer;',
+      reqBox:'width:14px;height:14px;flex-shrink:0;border:1px solid var(--line);background:var(--bg0);display:flex;align-items:center;justify-content:center;font-size:8px;',
+      reqTxt:'font-size:10px;color:var(--muted);',
+      btnRm: 'background:none;border:none;color:var(--muted);font-size:13px;line-height:1;cursor:pointer;padding:2px 6px;',
+    };
+
+    function typeOptions(sel) {
+      return FIELD_TYPES.map(t=>`<option value="${t.value}"${t.value===sel?' selected':''}>${t.value} — ${t.label.split(' — ')[1]??t.label}</option>`).join('');
+    }
+
+    function collOptions(sel) {
+      return '<option value="">— select collection —</option>' +
+        allColls.filter(c=>c.id!==selectedId).map(c=>`<option value="${c.id}"${c.id===sel?' selected':''}>${escHtml(c.label)} (${c.id})</option>`).join('');
+    }
+
+    const VALIDATABLE_TYPES = new Set(['string','url','email','richtext','number']);
+    function addFieldRow(container, key='', label='', type='string', required=false, options='', collection='', multiple=true, group='', depth='', min='', max='', regex='') {
+      const div = document.createElement('div');
+      div.style.cssText = S.row;
+      div.setAttribute('draggable','true');
+      div.innerHTML = `
+        <span class="fld-drag" title="Drag to reorder">⠿</span>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <input class="f-key"   style="${S.iKey}" placeholder="field_key"  value="${escHtml(key)}"   />
+          <input class="f-label" style="${S.iLbl}" placeholder="Field label" value="${escHtml(label)}" />
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <select class="f-type" style="${S.input}">${typeOptions(type)}</select>
+          <div class="fr-opts-select" style="display:${type==='select'?'block':'none'};">
+            <input class="f-options" style="${S.input}" placeholder="opt1, opt2, opt3" value="${escHtml(options)}" />
+          </div>
+          <div class="fr-opts-relation" style="display:${type==='relation'?'flex':'none'};flex-direction:column;gap:4px;">
+            <select class="f-rel-col" style="${S.input}">${collOptions(collection)}</select>
+            <label style="${S.reqW}">
+              <input type="checkbox" class="f-multiple"${multiple?' checked':''} style="display:none" />
+              <span class="mul-box" style="${S.reqBox}${multiple?'background:var(--gold);border-color:var(--gold);color:var(--bg0);':'color:transparent;'}">${multiple?'✓':''}</span>
+              <span style="${S.reqTxt}">Multiple</span>
+            </label>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <input class="f-group" style="${S.input};flex:1" placeholder="Group" value="${escHtml(group)}" />
+            <select class="f-depth" style="${S.input};width:60px">
+              <option value=""${depth===''||depth==null?' selected':''}>—</option>
+              <option value="0"${depth===0||depth==='0'?' selected':''}>D0</option>
+              <option value="1"${depth===1||depth==='1'?' selected':''}>D1</option>
+              <option value="2"${depth===2||depth==='2'?' selected':''}>D2</option>
+              <option value="3"${depth===3||depth==='3'?' selected':''}>D3</option>
+            </select>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <label style="${S.reqW}">
+              <input type="checkbox" class="f-required"${required?' checked':''} style="display:none" />
+              <span class="req-box" style="${S.reqBox}${required?'background:var(--gold);border-color:var(--gold);color:var(--bg0);':'color:transparent;'}">${required?'✓':''}</span>
+              <span style="${S.reqTxt}">Required</span>
+            </label>
+            <button type="button" style="${S.btnRm}" onclick="this.closest('[style]').remove()">✕</button>
+          </div>
+          <div class="fr-opts-validate" style="display:${VALIDATABLE_TYPES.has(type)?'flex':'none'};gap:4px;">
+            <input class="f-min" type="number" style="${S.input};width:52px" placeholder="min" value="${escHtml(String(min??''))}" title="Min length (text) or min value (number)" />
+            <input class="f-max" type="number" style="${S.input};width:52px" placeholder="max" value="${escHtml(String(max??''))}" title="Max length (text) or max value (number)" />
+            <input class="f-regex" style="${S.input};flex:1" placeholder="regex" value="${escHtml(regex??'')}" title="Validation regex pattern" />
+          </div>
+        </div>
+      `;
+      const cb  = div.querySelector('.f-required');
+      const box = div.querySelector('.req-box');
+      cb.addEventListener('change',function(){
+        box.style.background=this.checked?'var(--gold)':'var(--bg0)';
+        box.style.borderColor=this.checked?'var(--gold)':'var(--line)';
+        box.style.color=this.checked?'var(--bg0)':'transparent';
+        box.textContent=this.checked?'✓':'';
+      });
+      const mulCb=div.querySelector('.f-multiple'), mulBox=div.querySelector('.mul-box');
+      if (mulCb&&mulBox) {
+        mulCb.addEventListener('change',function(){
+          mulBox.style.background=this.checked?'var(--gold)':'var(--bg0)';
+          mulBox.style.borderColor=this.checked?'var(--gold)':'var(--line)';
+          mulBox.style.color=this.checked?'var(--bg0)':'transparent';
+          mulBox.textContent=this.checked?'✓':'';
+        });
+      }
+      div.querySelector('.f-type').addEventListener('change',function(){
+        div.querySelector('.fr-opts-select').style.display   = this.value==='select'   ?'block':'none';
+        div.querySelector('.fr-opts-relation').style.display = this.value==='relation' ?'flex':'none';
+        div.querySelector('.fr-opts-validate').style.display = VALIDATABLE_TYPES.has(this.value)?'flex':'none';
+      });
+      container.appendChild(div);
+    }
+
+    function enableFieldDrag(container) {
+      let dragSrc = null;
+      container.addEventListener('dragstart', e => {
+        const row = e.target.closest('[draggable]');
+        if (!row || !row.querySelector('.fld-drag')?.contains(e.target) && e.target.className !== 'fld-drag') { e.preventDefault(); return; }
+        dragSrc = row;
+        row.classList.add('fld-row-dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      container.addEventListener('dragend', () => {
+        dragSrc?.classList.remove('fld-row-dragging');
+        container.querySelectorAll('.fld-row-over').forEach(r => r.classList.remove('fld-row-over'));
+        dragSrc = null;
+      });
+      container.addEventListener('dragover', e => {
+        e.preventDefault();
+        const row = e.target.closest('[draggable]');
+        container.querySelectorAll('.fld-row-over').forEach(r => r.classList.remove('fld-row-over'));
+        if (row && row !== dragSrc) row.classList.add('fld-row-over');
+      });
+      container.addEventListener('drop', e => {
+        e.preventDefault();
+        const row = e.target.closest('[draggable]');
+        if (!dragSrc || !row || row === dragSrc) return;
+        row.classList.remove('fld-row-over');
+        const rows  = [...container.children];
+        const from  = rows.indexOf(dragSrc);
+        const to    = rows.indexOf(row);
+        container.removeChild(dragSrc);
+        if (from < to) row.after(dragSrc);
+        else row.before(dragSrc);
+      });
+    }
+
+    function serializeSchema(container) {
+      const schema = {};
+      container.querySelectorAll(':scope > div[style]').forEach(row=>{
+        const key = row.querySelector('.f-key')?.value.trim().toLowerCase().replace(/[^a-z0-9_]/g,'_');
+        if (!key) return;
+        const type = row.querySelector('.f-type').value;
+        const entry = { type, required:row.querySelector('.f-required').checked, label:row.querySelector('.f-label').value.trim()||key };
+        if (type==='select') entry.options=row.querySelector('.f-options').value.split(',').map(s=>s.trim()).filter(Boolean);
+        if (type==='relation') { entry.collection=row.querySelector('.f-rel-col').value; entry.multiple=row.querySelector('.f-multiple').checked; }
+        const grp = row.querySelector('.f-group')?.value.trim();
+        if (grp) entry.group = grp;
+        const dep = row.querySelector('.f-depth')?.value;
+        if (dep !== '' && dep != null) entry.depth = parseInt(dep);
+        const minV = row.querySelector('.f-min')?.value.trim();
+        const maxV = row.querySelector('.f-max')?.value.trim();
+        const rgx  = row.querySelector('.f-regex')?.value.trim();
+        if (minV !== '' && minV != null) entry.min = Number(minV);
+        if (maxV !== '' && maxV != null) entry.max = Number(maxV);
+        if (rgx) entry.regex = rgx;
+        schema[key]=entry;
+      });
+      return schema;
+    }
+
+    function showBannerIn(id, cls, text) {
+      const el=document.getElementById(id);
+      if (!el) return;
+      el.className='banner '+cls; el.textContent=text; el.style.display='';
+      setTimeout(()=>el.style.display='none',3000);
+    }
+
+    function renderNewForm() {
+      selectedId=null; renderCollList();
+      const panel=document.getElementById('editor-panel');
+      panel.innerHTML=`
+        <div id="banner" class="banner" style="display:none"></div>
+        <div class="editor-head"><div class="editor-title">New collection</div></div>
+        <div class="meta-row">
+          <div class="field-group">
+            <label>Collection ID</label>
+            <input class="input" id="new-col-id" placeholder="e.g. posts, products" />
+            <div class="field-id-hint">Lowercase letters, numbers, underscores</div>
+          </div>
+          <div class="field-group">
+            <label>Label</label>
+            <input class="input" id="new-col-label" placeholder="e.g. Posts, Products" />
+          </div>
+          <div class="field-group" style="grid-column:1/-1">
+            <label>Preview URL</label>
+            <input class="input" id="new-preview-url" placeholder="https://mysite.com/posts/{slug}" />
+            <div class="field-id-hint">{slug} is replaced with the entry slug when opening preview</div>
+          </div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);cursor:pointer;margin-bottom:12px;">
+          <input type="checkbox" id="new-col-singleton" />
+          <span>Singleton — single entry, opens directly from sidebar (for About pages, site config, etc.)</span>
+        </label>
+        <div class="section-label">Fields</div>
+        <div id="new-field-rows" class="field-rows"></div>
+        <div class="editor-actions">
+          <div style="display:flex;gap:10px;">
+            <button class="btn btn-primary" id="btn-save-new">Save collection</button>
+            <button class="btn" id="btn-add-new">+ Add field</button>
+          </div>
+        </div>
+      `;
+      document.getElementById('new-col-id').addEventListener('input',e=>{
+        e.target.value=e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,'_').replace(/^_+/,'');
+      });
+      const newRowsEl = document.getElementById('new-field-rows');
+      enableFieldDrag(newRowsEl);
+      document.getElementById('btn-add-new').addEventListener('click',()=>addFieldRow(newRowsEl));
+      addFieldRow(newRowsEl,'title','Title','string',true);
+      document.getElementById('btn-save-new').addEventListener('click',async()=>{
+        const id=document.getElementById('new-col-id').value.trim();
+        const label=document.getElementById('new-col-label').value.trim();
+        if (!id||!label) { showBannerIn('banner','banner-err','ID and label are required'); return; }
+        const schema=serializeSchema(document.getElementById('new-field-rows'));
+        const previewUrl=(document.getElementById('new-preview-url')?.value??'').trim();
+        const singleton=!!(document.getElementById('new-col-singleton')?.checked);
+        const res=await fetch('/api/collections',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,label,schema,singleton})});
+        const json=await res.json();
+        if (res.ok) {
+          if (previewUrl) await fetch(`/api/meta/preview_url~${id}`,{method:'PUT',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({value:previewUrl})}).catch(()=>{});
+          selectedId=id; await loadColls(); const col=allColls.find(c=>c.id===id); if(col)renderEditor(col);
+        } else showBannerIn('banner','banner-err',json.error??'Failed');
+      });
+    }
+
+    function renderEditor(col) {
+      const schema = typeof col.schema==='string' ? JSON.parse(col.schema||'{}') : (col.schema??{});
+      const total  = col.total ?? 0;
+      const panel  = document.getElementById('editor-panel');
+      panel.innerHTML=`
+        <div id="banner" class="banner" style="display:none"></div>
+        <div class="editor-head">
+          <div class="editor-title">${escHtml(col.label)}</div>
+          <div class="editor-sub">id: ${col.id} · ${total} entr${total===1?'y':'ies'}</div>
+        </div>
+        <div class="meta-row">
+          <div class="field-group">
+            <label>Collection ID</label>
+            <input class="input" value="${col.id}" readonly />
+            <div class="field-id-hint">ID cannot be changed after creation</div>
+          </div>
+          <div class="field-group">
+            <label>Label</label>
+            <input class="input" id="edit-label" value="${escHtml(col.label)}" />
+          </div>
+          <div class="field-group" style="grid-column:1/-1">
+            <label>Preview URL</label>
+            <input class="input" id="edit-preview-url" placeholder="https://mysite.com/posts/{slug}" />
+            <div class="field-id-hint">{slug} is replaced with the entry slug when opening preview</div>
+          </div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);cursor:pointer;margin-bottom:12px;">
+          <input type="checkbox" id="edit-col-singleton"${col.singleton?' checked':''} />
+          <span>Singleton — single entry, opens directly from sidebar</span>
+        </label>
+        <div class="section-label">Fields</div>
+        ${total>0?'<div class="delete-warn">Adding fields is non-destructive. Removing fields hides existing data but does not delete it.</div>':''}
+        <div id="edit-field-rows" class="field-rows"></div>
+        <div class="editor-actions">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn btn-primary" id="btn-save-edit">Save</button>
+            <button class="btn" id="btn-add-edit">+ Add field</button>
+            <button class="btn" id="btn-export-schema">↓ Export schema</button>
+            <label class="btn" style="cursor:pointer;">↑ Import schema<input type="file" id="import-schema-file" accept=".json" style="display:none"></label>
+            <select class="btn" id="apply-template-select" style="appearance:auto;padding:0 10px;cursor:pointer;">
+              <option value="">Apply template…</option>
+              <option value="blog">Blog (Posts)</option>
+              <option value="portfolio">Portfolio (Projects)</option>
+              <option value="business-pages">Business (Pages)</option>
+              <option value="business-services">Business (Services)</option>
+              <option value="business-team">Business (Team)</option>
+              <option value="events">Events</option>
+              <option value="dossier">Dossier (39 fields, depth)</option>
+              <option value="authors">Authors (name, bio, avatar, social)</option>
+            </select>
+          </div>
+          <button class="btn" id="btn-rename-field" title="Rename a field key in schema + all entry data">↔ Rename field</button>
+          <button class="btn" id="btn-del-col" style="color:var(--red);border-color:var(--red);">Delete collection</button>
+        </div>
+      `;
+      const rowsEl=document.getElementById('edit-field-rows');
+      enableFieldDrag(rowsEl);
+      Object.entries(schema).forEach(([k,f])=>addFieldRow(rowsEl,k,f.label??k,f.type??'string',!!f.required,(f.options??[]).join(', '),f.collection??'',f.multiple!==false,f.group??'',f.depth??'',f.min??'',f.max??'',f.regex??''));
+      document.getElementById('btn-add-edit').addEventListener('click',()=>addFieldRow(rowsEl));
+      document.getElementById('btn-export-schema').addEventListener('click',()=>{
+        const blob=new Blob([JSON.stringify(serializeSchema(rowsEl),null,2)],{type:'application/json'});
+        const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`${col.id}-schema.json`; a.click(); URL.revokeObjectURL(a.href);
+      });
+      document.getElementById('import-schema-file').addEventListener('change',e=>{
+        const file=e.target.files[0]; if (!file) return;
+        const reader=new FileReader();
+        reader.onload=ev=>{
+          try {
+            const s=JSON.parse(ev.target.result);
+            rowsEl.innerHTML='';
+            Object.entries(s).forEach(([k,f])=>addFieldRow(rowsEl,k,f.label??k,f.type??'string',!!f.required,(f.options??[]).join(', '),f.collection??'',f.multiple!==false,f.group??'',f.depth??'',f.min??'',f.max??'',f.regex??''));
+          } catch { alert('Invalid schema JSON'); }
+        };
+        reader.readAsText(file); e.target.value='';
+      });
+      document.getElementById('apply-template-select').addEventListener('change', async e=>{
+        const tpl = e.target.value; e.target.value = '';
+        if (!tpl) return;
+        if (!confirm(`Apply "${tpl}" template schema? This replaces all fields (entries are preserved).`)) return;
+        const SCHEMAS = {
+          blog: {title:{type:'string',required:true,label:'Titel'},excerpt:{type:'string',label:'Teaser'},body:{type:'richtext',label:'Text'},image:{type:'media',label:'Bild'},tags:{type:'array',label:'Tags'},categories:{type:'relation',collection:'post_categories',multiple:true,label:'Kategorien'}},
+          portfolio: {title:{type:'string',required:true,label:'Titel'},body:{type:'richtext',label:'Beschreibung'},image:{type:'media',label:'Vorschau'},url:{type:'string',label:'Website'},tags:{type:'array',label:'Tags'},categories:{type:'relation',collection:'project_categories',multiple:true,label:'Kategorien'}},
+          'business-pages': {title:{type:'string',required:true,label:'Titel'},body:{type:'richtext',label:'Text'}},
+          'business-services': {title:{type:'string',required:true,label:'Titel'},description:{type:'string',label:'Beschreibung'},price:{type:'string',label:'Preis'}},
+          'business-team': {name:{type:'string',required:true,label:'Name'},role:{type:'string',label:'Rolle'},bio:{type:'richtext',label:'Bio'},image:{type:'media',label:'Foto'}},
+          events: {title:{type:'string',required:true,label:'Titel'},date:{type:'date',required:true,label:'Datum'},location:{type:'string',label:'Ort'},body:{type:'richtext',label:'Beschreibung'},image:{type:'media',label:'Bild'},ticket_url:{type:'string',label:'Ticket-Link'},categories:{type:'relation',collection:'event_categories',multiple:true,label:'Kategorien'}},
+          authors: {name:{type:'string',required:true,label:'Name'},role:{type:'string',label:'Rolle / Titel'},bio:{type:'string',label:'Bio'},avatar:{type:'media',label:'Profilbild'},email:{type:'string',label:'E-Mail'},website:{type:'url',label:'Website'},social:{type:'array',label:'Social Links'},expertise:{type:'array',label:'Expertise / Tags'},orcid:{type:'string',label:'ORCID iD'}},
+          dossier: {title:{type:'string',required:true,label:'Titel',group:'Content',depth:0},excerpt:{type:'string',label:'Teaser',group:'Content',depth:0},body:{type:'richtext',label:'Text',group:'Content',depth:0},humanSummary:{type:'string',label:'Human Summary',group:'Content',depth:0},hypothesis:{type:'string',label:'Hypothese',group:'Research',depth:1},testSetup:{type:'string',label:'Test-Setup',group:'Research',depth:1},observations:{type:'string',label:'Beobachtungen',group:'Research',depth:1},findings:{type:'string',label:'Findings',group:'Research',depth:1},limitations:{type:'string',label:'Einschränkungen',group:'Research',depth:1},openQuestions:{type:'string',label:'Offene Fragen',group:'Research',depth:1},claims:{type:'table',label:'Claims',group:'Evidence',depth:2},sources:{type:'table',label:'Sources (APA 7)',group:'Evidence',format:'apa7',depth:2},relationships:{type:'table',label:'Relationships',group:'Evidence',depth:2},series:{type:'string',label:'Serie',group:'Meta',depth:1},keywords:{type:'array',label:'Keywords',group:'Meta',depth:3},contentType:{type:'select',label:'Content-Typ',group:'Meta',depth:1,options:['investigation','analysis','comparison','guide','deep-dive','tutorial']},language:{type:'select',label:'Sprache',group:'Meta',depth:1,options:['de','en','de+en']},author:{type:'string',label:'Autor',group:'Provenance',depth:3},authorship:{type:'select',label:'Authorship',group:'Provenance',depth:3,options:['human','ai-assisted','ai-generated','collaborative']},aiContribution:{type:'string',label:'AI-Beitrag',group:'Provenance',depth:3},reviewedBy:{type:'string',label:'Reviewed by',group:'Provenance',depth:3},reviewStatus:{type:'select',label:'Review-Status',group:'Provenance',depth:3,options:['draft','peer-reviewed','self-reviewed','unreviewed']},modelDisclosure:{type:'string',label:'Modell-Disclosure',group:'Provenance',depth:3},summaryMachine:{type:'string',label:'Machine Summary',group:'Agent',depth:3},dossierId:{type:'string',label:'Dossier-ID',group:'Agent',depth:3},tokensApprox:{type:'number',label:'Tokens (ca.)',group:'Agent',depth:3},suggestedPrompts:{type:'array',label:'Suggested Prompts',group:'Agent',depth:3},hero:{type:'media',label:'Hero-Bild',depth:0}},
+        };
+        const s = SCHEMAS[tpl];
+        if (!s) return;
+        rowsEl.innerHTML='';
+        Object.entries(s).forEach(([k,f])=>addFieldRow(rowsEl,k,f.label??k,f.type??'string',!!f.required,(f.options??[]).join(', '),f.collection??'',f.multiple!==false,f.group??'',f.depth??'',f.min??'',f.max??'',f.regex??''));
+        showBannerIn('banner','banner-ok',`Template "${tpl}" applied — click Save to persist`);
+      });
+      // Load existing preview URL for this collection
+      fetch(`/api/meta/preview_url~${col.id}`,{credentials:'include'}).then(r=>r.json()).then(d=>{
+        const inp=document.getElementById('edit-preview-url'); if(inp)inp.value=d.value??'';
+      }).catch(()=>{});
+      document.getElementById('btn-rename-field').addEventListener('click', async () => {
+        const from = prompt('Current field key (internal name):');
+        if (!from) return;
+        const to = prompt(`New field key for "${from}":`);
+        if (!to || to === from) return;
+        if (!confirm(`Rename field "${from}" → "${to}" in schema AND all entry data?\nThis cannot be undone.`)) return;
+        const res = await fetch(`/api/collections/${col.id}/schema/rename-field`, {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ from, to }),
+        });
+        const j = await res.json();
+        if (res.ok) { await loadColls(); showBannerIn('banner','banner-ok',`Renamed "${from}" → "${to}" in ${j.renamed} entries`); }
+        else showBannerIn('banner','banner-err', j.error ?? 'Failed');
+      });
+
+      document.getElementById('btn-save-edit').addEventListener('click',async()=>{
+        const label=document.getElementById('edit-label').value.trim();
+        const schema=serializeSchema(rowsEl);
+        const previewUrl=(document.getElementById('edit-preview-url')?.value??'').trim();
+        const singleton=!!(document.getElementById('edit-col-singleton')?.checked);
+        const [res] = await Promise.all([
+          fetch(`/api/collections/${col.id}`,{method:'PUT',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({label,schema,singleton})}),
+          fetch(`/api/meta/preview_url~${col.id}`,{method:'PUT',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({value:previewUrl})}),
+        ]);
+        if (res.ok) { await loadColls(); showBannerIn('banner','banner-ok','Saved'); }
+        else { const j=await res.json(); showBannerIn('banner','banner-err',j.error??'Failed'); }
+      });
+      document.getElementById('btn-del-col').addEventListener('click',async()=>{
+        const msg=total>0?`Delete "${col.label}" and all ${total} entries? This cannot be undone.`:`Delete collection "${col.label}"?`;
+        if (!confirm(msg)) return;
+        await fetch(`/api/collections/${col.id}`,{method:'DELETE',credentials:'include'});
+        selectedId=null; await loadColls(); renderEmpty();
+      });
+    }
+
+    function escHtml(str) { return String(str??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    document.getElementById('btn-new-coll').addEventListener('click',()=>renderNewForm());
+    document.getElementById('btn-new-empty')?.addEventListener('click',()=>renderNewForm());
+
+    loadColls();
+  </script>
+    </div>
+  </div>
+  <script src="/search.js"></script>
+  <script src="/sidebar.js"></script>
+  <script src="/router.js"></script>
+</body>
+</html>  
+

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orbiter — Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Space+Grotesk:wght@300;400;500;600&family=Noto+Serif+JP:wght@200;300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css" />
+  <script src="/theme.js"></script>
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="login-box">
+      <div class="login-logo">
+        <div class="login-mark"></div>
+        <div class="login-logo-mark">ORBITER</div>
+        <div class="login-logo-sub">Lander · PHP</div>
+      </div>
+      <div class="login-card" role="main">
+        <h2 role="heading" aria-level="1">Sign in</h2>
+        <div class="login-error" id="error"></div>
+        <form id="login-form">
+          <div class="field">
+            <label class="label" for="username">Username</label>
+            <input class="input" id="username" name="username" type="text" autocomplete="username" autofocus required />
+          </div>
+          <div class="field">
+            <label class="label" for="password">Password</label>
+            <input class="input" id="password" name="password" type="password" autocomplete="current-password" required />
+          </div>
+          <div class="field" id="code-field" style="display:none">
+            <label class="label" for="code">Authentication code</label>
+            <input class="input" id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="123456 or a recovery code" />
+          </div>
+          <button class="btn btn-primary" style="width:100%;margin-top:8px;justify-content:center" type="submit" id="submit-btn">
+            Sign in
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Redirect if already logged in
+    const me = await fetch('/api/auth/me', { credentials: 'include' }).then(r => r.json()).catch(() => null);
+    if (me?.user) location.replace('/dashboard.html');
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn   = document.getElementById('submit-btn');
+      const error = document.getElementById('error');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Signing in…';
+      error.classList.remove('visible');
+
+      const res  = await fetch('/api/auth/login', {
+        method:      'POST',
+        credentials: 'include',
+        headers:     { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: e.target.username.value,
+          password: e.target.password.value,
+          code: e.target.code.value,
+        }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        location.replace('/dashboard.html');
+      } else {
+        if (data.totp) {
+          document.getElementById('code-field').style.display = '';
+          document.getElementById('code').focus();
+        }
+        error.textContent = data.error ?? 'Login failed';
+        error.classList.add('visible');
+        btn.disabled = false;
+        btn.textContent = 'Sign in';
+      }
+    });
+  </script>
+</body>
+</html>

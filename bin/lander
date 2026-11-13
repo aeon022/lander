@@ -1,0 +1,42 @@
+#!/usr/bin/env php
+<?php
+declare(strict_types=1);
+// Lander CLI:  bin/lander user <name> [admin|editor]   ·   bin/lander passwd <name>   ·   bin/lander collection <id> <label> [singleton]
+//              bin/lander import-md <collection> <ordner> [--overwrite]   ·   bin/lander seed-demo
+require dirname(__DIR__) . '/src/Api.php';
+$cfg = require dirname(__DIR__) . '/lander.config.php';
+$pod = new Pod($cfg['pod']);
+[$cmd, $a, $b, $c] = array_pad(array_slice($argv, 1), 4, null);
+$ask = function (string $q): string { fwrite(STDOUT, $q); system('stty -echo 2>/dev/null'); $v = trim((string)fgets(STDIN)); system('stty echo 2>/dev/null'); fwrite(STDOUT, "\n"); return $v; };
+$pw = fn(string $n) => getenv('LANDER_PASSWORD') ?: $ask("Passwort für $n: ");
+
+switch ($cmd) {
+    case 'user':
+        if (!$a) exit("Name fehlt\n");
+        $p = $pw($a); if (strlen($p) < 10) exit("Mindestens 10 Zeichen\n");
+        $pod->run('INSERT INTO _users (id, username, password, role) VALUES (?,?,?,?)', [Pod::uuid(), $a, password_hash($p, PASSWORD_DEFAULT), $b === 'editor' ? 'editor' : 'admin']);
+        echo "Benutzer $a angelegt\n"; break;
+    case 'passwd':
+        $p = $pw((string)$a); if (strlen($p) < 10) exit("Mindestens 10 Zeichen\n");
+        echo $pod->run('UPDATE _users SET password = ? WHERE username = ?', [password_hash($p, PASSWORD_DEFAULT), $a]) ? "Passwort gesetzt\n" : "Unbekannt\n";
+        $pod->run('DELETE FROM _sessions WHERE user_id IN (SELECT id FROM _users WHERE username = ?)', [$a]); break;
+    case 'collection':
+        if (!$a || !$b) exit("bin/lander collection <id> <label> [singleton]\n");
+        $pod->run('INSERT OR IGNORE INTO _collections (id, label, schema, singleton) VALUES (?,?,?,?)', [$a, $b, '{}', $c === 'singleton' ? 1 : 0]);
+        echo "Sammlung $a bereit\n"; break;
+    case 'import-md':
+        if (!$a || !$b || !is_dir($b)) exit("bin/lander import-md <collection> <ordner> [--overwrite]\n");
+        if (!$pod->collection($a)) exit("Sammlung $a gibt es nicht\n");
+        $n = 0;
+        foreach (glob(rtrim($b, '/') . '/*.{md,markdown}', GLOB_BRACE) as $f) {
+            [$data, $body] = Api::frontmatter((string)file_get_contents($f));
+            $slug = trim(preg_replace('/[^a-z0-9]+/', '-', strtolower((string)($data['slug'] ?? pathinfo($f, PATHINFO_FILENAME)))), '-');
+            $status = $data['status'] ?? 'draft'; unset($data['slug'], $data['status']); $data['body'] ??= $body;
+            if ($pod->entry($a, $slug)) { if ($c !== '--overwrite') continue; $pod->updateEntry($a, $slug, ['data' => $data, 'status' => $status]); }
+            else $pod->createEntry($a, $slug, $data, $status);
+            $n++;
+        }
+        echo "$n Einträge importiert\n"; break;
+    default:
+        echo "Befehle: user, passwd, collection, import-md\n";
+}

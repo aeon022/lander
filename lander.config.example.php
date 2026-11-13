@@ -1,0 +1,11 @@
+<?php
+// Kopieren nach lander.config.php und anpassen. Liegt außerhalb von public/.
+return [
+    'pod'            => __DIR__ . '/data/content.pod',   // SQLite, Orbiter-Format
+    'data_dir'       => __DIR__ . '/data',               // Rate-Limit-Dateien
+    'media_dir'      => __DIR__ . '/public/media',       // Uploads als Dateien
+    'media_url'      => '/media',                        // öffentlicher Pfad (oder volle URL)
+    'max_upload_mb'  => 12,
+    // Websites, die /api/public/... im Browser lesen dürfen (CORS)
+    'public_origins' => ['https://psychiaterin-graz.at', 'http://127.0.0.1:4321', 'http://localhost:4321'],
+];
