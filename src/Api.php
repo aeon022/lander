@@ -75,6 +75,7 @@ final class Api
             $r === 'import' && ($seg[1] ?? '') === 'markdown' && $m === 'POST' => $this->importMarkdown(),
             $r === 'users' && $n === 1 && $m === 'GET' => $this->json($this->isAdmin() ? $this->pod->all('SELECT id, username, role, created_at, last_login, totp_enabled FROM _users ORDER BY created_at') : []),
             $r === 'account' && ($seg[1] ?? '') === 'password' => $this->changePassword(),
+            $r === 'account' && ($seg[1] ?? '') === 'username' => $this->changeUsername(),
             $r === 'account' && ($seg[1] ?? '') === 'sessions' => $this->sessions($m, $seg[2] ?? null),
             $r === 'account' && ($seg[1] ?? '') === '2fa' => $this->json(['enabled' => false, 'recoveryLeft' => 0]),
             $r === 'api-keys' => $this->json(['keys' => []]),
@@ -135,6 +136,18 @@ final class Api
         $this->pod->run('UPDATE _users SET password = ? WHERE id = ?', [password_hash($new, PASSWORD_DEFAULT), $u['id']]);
         $this->pod->run('DELETE FROM _sessions WHERE user_id = ? AND token <> ?', [$u['id'], $_COOKIE['orb_sess'] ?? '']);
         $this->json(['ok' => true]);
+    }
+
+    private function changeUsername(): void
+    {
+        $b = $this->body();
+        $new = trim((string)($b['newUsername'] ?? ''));
+        $u = $this->pod->userByName($this->user['username']);
+        if (!password_verify((string)($b['currentPassword'] ?? ''), $u['password'])) { $this->json(['error' => 'Current password is wrong'], 400); return; }
+        if (!preg_match('/^[A-Za-z0-9._-]{3,40}$/', $new)) { $this->json(['error' => 'Username: 3–40 characters, letters, numbers, . _ -'], 400); return; }
+        if ($this->pod->userByName($new)) { $this->json(['error' => 'Username already taken'], 409); return; }
+        $this->pod->run('UPDATE _users SET username = ? WHERE id = ?', [$new, $u['id']]);
+        $this->json(['ok' => true, 'username' => $new]);
     }
 
     /** Eigene Sitzungen anzeigen und andere Geräte abmelden (wie Orbiter: id = Hash des Tokens, nie das Token selbst). */

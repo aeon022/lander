@@ -4,6 +4,8 @@
  * Also bootstraps xfce.js when orb_style === 'xfce'.
  */
 ;(function () {
+  // Lander: Ausblend-Regeln für Funktionen ohne PHP-Gegenstück
+  var ls = document.createElement('script'); ls.src = '/lander.js'; document.head.appendChild(ls);
   if ((localStorage.getItem('orb_style') || 'xfce') === 'xfce') {  // Lander: Station-Modus als Standard
     var xs = document.createElement('script');
     xs.src = '/xfce.js';

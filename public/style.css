@@ -2855,3 +2855,8 @@ html[data-zen="1"] .main {
 /* ── Lander: Bereiche, die es in der PHP-Version (noch) nicht gibt, ausblenden ── */
 [href="/analytics.html"], [href="/build.html"], [href="/calendar.html"], [href="/forms.html"], [href="/graph.html"],
 [href="/inbox.html"], [href="/publish.html"], [href="/snippets.html"], [href="/pods.html"], [href="/users.html"] { display: none !important; }
+
+/* Lander: Bedienelemente ohne PHP-Gegenstück (KI, Kommentare, CSV, WordPress-/Pod-Import, Medien per URL, Feld umbenennen) */
+.ai-toolbar-btn, #suggest-trigger-btn, #ai-panel, #suggest-panel, #comments-section,
+#tab-wp, #tab-pod, #export-btn, label:has(> #import-file), #btn-rename-field,
+.img-pick-tab[onclick*="'url'"], .img-pick-tab[onclick*="'link'"] { display: none !important; }

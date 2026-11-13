@@ -146,7 +146,7 @@
 
     // ── State ─────────────────────────────────────────────────────────────────
     let phase       = 'upload'; // 'upload' | 'preview' | 'done'
-    let activeTab   = 'wp';
+    let activeTab   = 'md';   // Lander: nur Markdown-Import
     let importToken = null;
     let plan        = null;
     let results     = null;
@@ -398,7 +398,7 @@
       `;
 
       document.getElementById('btn-another').addEventListener('click', () => {
-        phase = 'upload'; errorMsg = ''; activeTab = 'wp'; render();
+        phase = 'upload'; errorMsg = ''; activeTab = 'md'; render();
       });
     }
 
