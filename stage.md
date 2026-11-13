@@ -7,7 +7,7 @@
 - Behoben: Dock fehlte (sidebar.js lud xfce.js nur bei gespeichertem orb_style; `/api/info` ohne `podPath` brach das Dock ab).
 - Noch sichtbar, aber ohne Funktion: KI-Knöpfe im Editor («AI», «Suggest»), Bereiche Webhooks/API-Schlüssel/Vorlagen in den Einstellungen (leer).
 
-- 13.11.: Pinas Medien importiert (44 Dateien: pina, team, blumen, logos, lehrgang, dokumente). Sammlungen für psychiaterin-graz.at: `hinweis` (Singleton), `termine`, `news` mit Schemas. Lese-API löst Medienfelder auf, geplante Einträge werden zum Zeitpunkt live. Website angebunden und getestet.
+- 13.11.: Pinas Medien importiert (44 Dateien: pina, team, blumen, logos, lehrgang, dokumente). Sammlungen für psychiaterin-graz.at: `hinweis` (Singleton), `termine`, `blog` mit Schemas. Lese-API löst Medienfelder auf, geplante Einträge werden zum Zeitpunkt live. Website angebunden und getestet.
 
 ## Als Nächstes
 1. KI-Knöpfe und leere Einstellungsbereiche ausblenden; Klick-Tests (Speichern, Upload über Oberfläche).
