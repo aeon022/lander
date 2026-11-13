@@ -497,10 +497,11 @@ final class Api
         header('Cache-Control: public, max-age=60, stale-while-revalidate=300');
         if ($slug !== null && $slug !== '') {
             $e = $pod->entry($col, $slug, $locale ?? '');
-            ($e && $e['status'] === 'published' && $live($e)) ? $this->json($out($e)) : $this->json(['error' => 'Not found'], 404);
+            ($e && ($e['status'] === 'published' || ($e['status'] === 'scheduled' && $e['publish_at'] !== null)) && $live($e)) ? $this->json($out($e)) : $this->json(['error' => 'Not found'], 404);
             return;
         }
-        $list = array_values(array_filter($pod->entries($col, 'published', $locale), $live));
+        // «Geplant» wird live, sobald publish_at erreicht ist (kein Hintergrundprozess nötig)
+        $list = array_values(array_filter(array_merge($pod->entries($col, 'published', $locale), array_filter($pod->entries($col, 'scheduled', $locale), fn($e) => $e['publish_at'] !== null)), $live));
         $this->json($c['singleton'] ? ($list ? $out($list[0]) : new stdClass()) : array_map($out, $list));
     }
 
