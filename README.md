@@ -5,6 +5,7 @@
 - **Admin:** die Orbiter-Oberfläche (Station-Modus) unverändert als statische Dateien, dahinter eine PHP-API mit denselben Pfaden und JSON-Formaten.
 - **Live einlesen:** Websites lesen veröffentlichte Inhalte zur Laufzeit über `/api/public/<sammlung>[/<slug>]` (CORS für eingetragene Domains, 60 s Cache). Änderungen sind sofort sichtbar, ohne Neubau.
 - **Markdown-Import:** `.md` mit Frontmatter über Admin → Import oder `bin/lander import-md`.
+- **Medienfelder aufgelöst:** In der Lese-API werden Bild-, Datei- und Medienfelder zu `{id, url, alt, type}` (volle URL).
 - **Medien als Dateien:** Uploads landen in `public/media/<ordner>/`, nicht in der Datenbank. Erlaubt: JPG, PNG, WebP, GIF, AVIF, PDF (echter Dateityp geprüft). PHP-Ausführung im Medienordner gesperrt.
 
 ## Schnellstart (lokal)
@@ -14,6 +15,7 @@ cp lander.config.example.php lander.config.php
 docker compose up -d                       # PHP 8.3 + Apache auf http://127.0.0.1:8088
 docker compose exec -u www-data lander php bin/lander user <name> admin
 docker compose exec -u www-data lander php bin/lander collection blog "Blog"
+docker compose exec -u www-data -w /var/www/lander lander php bin/lander import-media <ordner> <medienordner>
 ```
 
 ## Auf den Server

@@ -493,7 +493,21 @@ final class Api
         $locale = isset($_GET['locale']) ? (string)$_GET['locale'] : null;
         $now = Pod::now();
         $live = fn(array $e) => ($e['publish_at'] === null || $e['publish_at'] <= $now) && ($e['unpublish_at'] === null || $e['unpublish_at'] > $now);
-        $out = fn(array $e) => ['slug' => $e['slug'], 'locale' => $e['locale'], 'data' => $e['data'] ?: new stdClass(), 'updated_at' => $e['updated_at']];
+        // Bild-, Datei- und Medienfelder (gespeichert als Medien-ID) für Websites auflösen: {id, url, alt, type}
+        $schema = json_decode($c['schema'] ?: '{}', true) ?: [];
+        $mediaKeys = array_keys(array_filter($schema, fn($f) => in_array($f['type'] ?? '', ['image', 'file', 'media'], true)));
+        $base = (($_SERVER['HTTPS'] ?? '') === 'on' ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? '');
+        $resolve = function (mixed $v) use ($pod, $base) {
+            if (!is_string($v) || $v === '') return $v;
+            $m = $pod->one('SELECT id, url, alt, mime_type FROM _media WHERE id = ?', [$v]);
+            if (!$m) return null;
+            return ['id' => $m['id'], 'url' => str_starts_with((string)$m['url'], '/') ? $base . $m['url'] : $m['url'], 'alt' => $m['alt'], 'type' => $m['mime_type']];
+        };
+        $out = function (array $e) use ($mediaKeys, $resolve) {
+            $d = $e['data'];
+            foreach ($mediaKeys as $k) if (array_key_exists($k, $d)) $d[$k] = $resolve($d[$k]);
+            return ['slug' => $e['slug'], 'locale' => $e['locale'], 'data' => $d ?: new stdClass(), 'updated_at' => $e['updated_at'], 'publish_at' => $e['publish_at']];
+        };
         header('Cache-Control: public, max-age=60, stale-while-revalidate=300');
         if ($slug !== null && $slug !== '') {
             $e = $pod->entry($col, $slug, $locale ?? '');

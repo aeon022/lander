@@ -2,7 +2,7 @@
 <?php
 declare(strict_types=1);
 // Lander CLI:  bin/lander user <name> [admin|editor]   ·   bin/lander passwd <name>   ·   bin/lander collection <id> <label> [singleton]
-//              bin/lander import-md <collection> <ordner> [--overwrite]   ·   bin/lander seed-demo
+//              bin/lander import-md <collection> <ordner> [--overwrite]   ·   bin/lander import-media <ordner> <medienordner>
 require dirname(__DIR__) . '/src/Api.php';
 $cfg = require dirname(__DIR__) . '/lander.config.php';
 $pod = new Pod($cfg['pod']);
@@ -37,6 +37,26 @@ switch ($cmd) {
             $n++;
         }
         echo "$n Einträge importiert\n"; break;
+    case 'import-media':
+        // Dateien aus <ordner> in die Mediathek kopieren (gleiche Regeln wie der Upload im Admin)
+        if (!$a || !is_dir($a)) exit("bin/lander import-media <ordner> <medienordner>\n");
+        $types = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif', 'image/avif' => 'avif', 'application/pdf' => 'pdf'];
+        $folder = implode('/', array_filter(explode('/', preg_replace('/[^a-z0-9_\/-]/', '', strtolower((string)$b))), fn($x) => $x !== '' && $x !== '..'));
+        $dir = rtrim($cfg['media_dir'], '/') . ($folder !== '' ? "/$folder" : '');
+        if (!is_dir($dir)) mkdir($dir, 0755, true);
+        $fi = new finfo(FILEINFO_MIME_TYPE); $n = 0;
+        foreach (glob(rtrim($a, '/') . '/*') as $f) {
+            $type = $fi->file($f) ?: '';
+            if (!isset($types[$type])) { echo "übersprungen (Typ $type): " . basename($f) . "\n"; continue; }
+            $id = Pod::uuid();
+            $base = trim(preg_replace('/[^a-z0-9]+/', '-', strtolower(pathinfo($f, PATHINFO_FILENAME))), '-') ?: 'datei';
+            $name = substr($id, 0, 8) . '-' . substr($base, 0, 60) . '.' . $types[$type];
+            copy($f, "$dir/$name"); chmod("$dir/$name", 0644);
+            $url = rtrim($cfg['media_url'], '/') . ($folder !== '' ? "/$folder" : '') . "/$name";
+            $pod->run('INSERT INTO _media (id, filename, mime_type, size, data, alt, folder, url, path) VALUES (?,?,?,?,NULL,NULL,?,?,?)', [$id, $name, $type, filesize("$dir/$name"), $folder, $url, "$dir/$name"]);
+            $n++;
+        }
+        echo "{$n} Dateien in «{$folder}» importiert\n"; break;
     default:
-        echo "Befehle: user, passwd, collection, import-md\n";
+        echo "Befehle: user, passwd, collection, import-md, import-media\n";
 }
