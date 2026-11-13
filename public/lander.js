@@ -5,6 +5,8 @@
   var GROUPS = ['AI Assistant', 'GitHub', 'Public API', 'Preview URLs', 'Media', 'Email notifications', 'Templates', 'FTP / FTPS Deploy', 'GitHub Sync'];
   var ROWS = ['Webhook URL'];
   function apply() {
+    if (/^Orbiter( Admin)?/.test(document.title)) document.title = document.title.replace(/^Orbiter( Admin)?/, 'Lander');
+    document.querySelectorAll('a.logo').forEach(function (a) { var last = a.lastChild; if (last && last.nodeType === 3 && last.textContent.trim() === 'Orbiter') last.textContent = 'Lander'; });
     document.querySelectorAll('.group-header').forEach(function (h) {
       if (GROUPS.indexOf(h.textContent.trim()) > -1 && h.parentElement) h.parentElement.style.display = 'none';
     });

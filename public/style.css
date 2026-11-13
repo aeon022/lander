@@ -2860,3 +2860,21 @@ html[data-zen="1"] .main {
 .ai-toolbar-btn, #suggest-trigger-btn, #ai-panel, #suggest-panel, #comments-section,
 #tab-wp, #tab-pod, #export-btn, label:has(> #import-file), #btn-rename-field,
 .img-pick-tab[onclick*="'url'"], .img-pick-tab[onclick*="'link'"] { display: none !important; }
+
+/* ── Lander: «Touchdown»-Amber als Akzent der Space-Palette (andere Paletten bleiben unverändert) ── */
+html[data-lander] { --lander-accent: #b8730f; }
+html[data-lander]:not([data-theme]) { --accent: #a8650f; --accent-bg: rgba(184,115,15,.10); }
+html[data-lander][data-scheme="dark"] { --lander-accent: #f0a63a; }
+html[data-lander][data-scheme="dark"]:not([data-theme]) { --accent: #f0a63a; --accent-bg: rgba(240,166,58,.12); }
+@media (prefers-color-scheme: dark) {
+  html[data-lander]:not([data-scheme="light"]) { --lander-accent: #f0a63a; }
+  html[data-lander]:not([data-scheme="light"]):not([data-theme]) { --accent: #f0a63a; --accent-bg: rgba(240,166,58,.12); }
+}
+.lander-mark { display: block; margin: 0 auto 14px; overflow: visible; }
+.lander-site { margin-top: 14px; font-family: var(--mono); font-size: 12px; letter-spacing: .08em; color: var(--heading); }
+@media (prefers-reduced-motion: no-preference) {
+  .lander-mark .lander-body { animation: lander-touchdown 1.6s cubic-bezier(.2,.8,.25,1) .2s both; }
+  .lander-mark .lander-ground { animation: lander-ground 1.6s ease .2s both; }
+}
+@keyframes lander-touchdown { 0% { transform: translateY(-22px); opacity: 0; } 60% { transform: translateY(2px); opacity: 1; } 80% { transform: translateY(-1px); } 100% { transform: none; } }
+@keyframes lander-ground { 0%, 50% { opacity: 0; } 100% { opacity: .5; } }

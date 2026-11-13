@@ -39,6 +39,7 @@ final class Api
             if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true) && !$this->sameOrigin()) { $this->json(['error' => 'CSRF check failed'], 403); return; }
 
             if ($method === 'POST' && $path === '/api/auth/login') { $this->login(); return; }
+            if ($method === 'GET' && $path === '/api/brand') { $this->json(['name' => $this->pod->getMeta('site.name'), 'product' => 'Lander']); return; }
             if ($method === 'POST' && $path === '/api/auth/logout') { $this->logout(); return; }
 
             $this->user = $this->pod->sessionUser($_COOKIE['orb_sess'] ?? '');
@@ -181,7 +182,7 @@ final class Api
             'siteName' => $this->pod->getMeta('site.name'),
             'podSize' => @filesize($this->cfg['pod']) ?: 0,
             'formatVersion' => $this->pod->getMeta('format_version') ?? '1',
-            'adminVersion' => 'lander-0.1.0',
+            'adminVersion' => 'Lander 0.1.0 · Oberfläche Orbiter 0.3.90',
             'collections' => $cols,
             'nav' => ['hidden' => array_values(array_filter(array_map('trim', explode(',', $hidden)))), 'groups' => json_decode($this->pod->getMeta('nav.groups') ?? 'null', true)],
         ]);

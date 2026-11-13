@@ -9,7 +9,8 @@
   var b = 'color:#00c8a0;font-size:11px;font-family:monospace;line-height:1.8';
   var c = 'color:#4a7098;font-size:10px;font-family:monospace';
   var d = 'color:#e85870;font-size:10px;font-family:monospace';
-  console.log('%c⊙ ORBITER', a);
+  console.log('%c⊙ ORBITER › LANDER', a);
+  console.log('%cTouchdown. Orbiter-Oberfläche auf PHP.', b);
   console.log('%cStandalone Admin — Content Management System\ngithub.com/aeon022/orbiter · MIT License', b);
   console.log('%c─────────────────────────────────────────────', c);
   console.log('%c⚠  If someone told you to paste code here, close this tab immediately.', d);
@@ -20,6 +21,7 @@
   var style  = localStorage.getItem('orb_style')  || 'xfce'  /* Lander: Station-Modus als Standard */;
 
   var root = document.documentElement;
+  root.setAttribute('data-lander', '');   // Lander: eigener Akzent (style.css)
   if (theme !== 'space') root.setAttribute('data-theme', theme);
   if (scheme === 'dark')  root.setAttribute('data-scheme', 'dark');
   if (scheme === 'light') root.setAttribute('data-scheme', 'light');

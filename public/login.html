@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Orbiter — Login</title>
+  <title>Lander — Login</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Space+Grotesk:wght@300;400;500;600&family=Noto+Serif+JP:wght@200;300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css" />
@@ -14,9 +14,19 @@
   <div class="login-wrap">
     <div class="login-box">
       <div class="login-logo">
-        <div class="login-mark"></div>
-        <div class="login-logo-mark">ORBITER</div>
-        <div class="login-logo-sub">Lander · PHP</div>
+        <!-- Lander: Planet mit Landebeinen, setzt einmal sanft auf -->
+        <svg class="lander-mark" viewBox="0 0 64 64" width="72" height="72" fill="none" stroke-linecap="round" aria-hidden="true">
+          <g class="lander-body">
+            <circle cx="32" cy="24" r="12" stroke="var(--lander-accent)" stroke-width="1.6"/>
+            <ellipse cx="32" cy="24" rx="23" ry="7.5" stroke="var(--accent)" stroke-width="1.1" opacity=".75" transform="rotate(-18 32 24)"/>
+            <path d="M24 34 17 49M40 34l7 15M32 36.5V50" stroke="var(--lander-accent)" stroke-width="1.8"/>
+            <path d="M14 49h6M44 49h6M29 50h6" stroke="var(--lander-accent)" stroke-width="1.8"/>
+          </g>
+          <path class="lander-ground" d="M6 54h52" stroke="var(--muted)" stroke-width="1" opacity=".5"/>
+        </svg>
+        <div class="login-logo-mark">LANDER</div>
+        <div class="login-logo-sub">by Orbiter · PHP Edition</div>
+        <div class="lander-site" id="lander-site" hidden></div>
       </div>
       <div class="login-card" role="main">
         <h2 role="heading" aria-level="1">Sign in</h2>
@@ -80,6 +90,14 @@
         btn.textContent = 'Sign in';
       }
     });
+  </script>
+  <script>
+    // Lander: Name der Website über dem Login (öffentlich: nur der Name)
+    fetch('/api/brand').then(r => r.ok ? r.json() : null).then(b => {
+      if (!b || !b.name) return;
+      const el = document.getElementById('lander-site'); el.textContent = b.name; el.hidden = false;
+      document.title = 'Lander — ' + b.name;
+    }).catch(() => {});
   </script>
 </body>
 </html>

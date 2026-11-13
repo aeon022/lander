@@ -84,10 +84,12 @@
     sb.innerHTML = [
       '<div class="xfce-sb-left">',
         '<a class="xfce-sb-logo" href="/dashboard.html">',
-          '<svg viewBox="0 0 20 20" width="12" height="12" fill="none" style="margin-right:5px;vertical-align:middle">',
-            '<circle cx="10" cy="10" r="4.5" fill="currentColor" opacity=".9"/>',
-            '<ellipse cx="10" cy="10" rx="9" ry="3.2" stroke="currentColor" stroke-width="1" opacity=".5" transform="rotate(-22 10 10)"/>',
-          '</svg>ORBITER',
+          // Lander: Zeichen mit Landebeinen, «ORBITER › LANDER»
+          '<svg viewBox="0 0 20 20" width="13" height="13" fill="none" stroke-linecap="round" style="margin-right:5px;vertical-align:middle">',
+            '<circle cx="10" cy="7.5" r="3.6" fill="currentColor" opacity=".9"/>',
+            '<ellipse cx="10" cy="7.5" rx="8" ry="2.6" stroke="currentColor" stroke-width=".9" opacity=".5" transform="rotate(-18 10 7.5)"/>',
+            '<path d="M7.6 10.6 5.4 15.5M12.4 10.6l2.2 4.9M10 11.4v4.4M4.4 15.5h2M13.6 15.5h2M9 15.8h2" stroke="var(--lander-accent)" stroke-width="1.1"/>',
+          '</svg>ORBITER <span style="opacity:.45">›</span> <span style="color:var(--lander-accent)">LANDER</span>',
         '</a>',
         '<span class="xfce-sb-div">·</span>',
         '<span id="xfce-sb-site">—</span>',
