@@ -9,6 +9,8 @@
 
 - 13.11.: Pinas Medien importiert (44 Dateien: pina, team, blumen, logos, lehrgang, dokumente). Sammlungen für psychiaterin-graz.at: `hinweis` (Singleton), `termine`, `blog` mit Schemas. Lese-API löst Medienfelder auf, geplante Einträge werden zum Zeitpunkt live. Website angebunden und getestet.
 
+- 13.11.: Branding: Zeichen (Planet mit Landebeinen), Favicon, Login mit Aufsetz-Animation und Seitenname (`/api/brand`, öffentlich nur der Name), Statusleiste «ORBITER › LANDER», Titel «Lander — …», Touchdown-Amber als Akzent der Space-Palette (`html[data-lander]`), Version «Lander 0.1.0 · Oberfläche Orbiter 0.3.90». Seitenname in den Einstellungen gesetzt.
+
 ## Als Nächstes
 1. KI-Knöpfe und leere Einstellungsbereiche ausblenden; Klick-Tests (Speichern, Upload über Oberfläche).
 2. psychiaterin-graz.at anbinden: Hinweis + Lehrgangstermine live aus `/api/public/…`.
