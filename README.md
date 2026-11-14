@@ -41,6 +41,7 @@ const termine = await fetch('https://redaktion.example.at/api/public/termine').t
 | Medien | BLOB im Pod oder S3 | Dateien im Ordner |
 | Passwörter | scrypt | `password_hash` (Orbiter-Benutzer: `bin/lander passwd`) |
 | Bereiche | alle | Dashboard, Sammlungen, Einträge, Editor, Medien, Import, Einstellungen, Konto |
-| 2FA, Workflow, Webhooks, Analytics, Formulare | ja | noch nicht |
+| Posteingang (Inbox): Einsendungen speichern, Status, Löschen | ja | ja, Annahme nur Server-zu-Server mit `form_token` (keine öffentliche Formular-API, kein Antworten aus dem Admin) |
+| 2FA, Workflow, Webhooks, Analytics, Form Builder | ja | noch nicht |
 
 Lizenz MIT, Oberfläche aus [Orbiter](https://github.com/aeon022/orbiter).

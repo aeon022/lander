@@ -6,6 +6,9 @@ return [
     'media_dir'      => __DIR__ . '/public/media',       // Uploads als Dateien
     'media_url'      => '/media',                        // öffentlicher Pfad (oder volle URL)
     'max_upload_mb'  => 12,
+    // Formular-Annahme (POST /api/form/{id}, nur Server-zu-Server, Header X-Lander-Token). Leer = aus.
+    // Erzeugen: php -r 'echo bin2hex(random_bytes(24)), "\n";'  — derselbe Wert steht in anfrage.config.php der Website.
+    'form_token'     => '',
     // Websites, die /api/public/... im Browser lesen dürfen (CORS)
     'public_origins' => ['https://psychiaterin-graz.at', 'http://127.0.0.1:4321', 'http://localhost:4321'],
 ];

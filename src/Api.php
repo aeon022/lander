@@ -36,6 +36,7 @@ final class Api
             if (str_starts_with($path, '/api/public/')) { $this->publicApi($method, substr($path, 12)); return; }
             if ($method === 'OPTIONS') { http_response_code(204); return; }
             $this->pod = new Pod($this->cfg['pod']);
+            if ($method === 'POST' && preg_match('#^/api/form/([a-z0-9_-]{1,64})$#', $path, $fm)) { $this->formSubmit($fm[1]); return; }
             if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true) && !$this->sameOrigin()) { $this->json(['error' => 'CSRF check failed'], 403); return; }
 
             if ($method === 'POST' && $path === '/api/auth/login') { $this->login(); return; }
@@ -74,6 +75,7 @@ final class Api
             $r === 'collections' && $n >= 3 && $seg[2] === 'entries' => $this->entries($m, $seg[1], array_slice($seg, 3)),
             $r === 'media' => $this->media($m, array_slice($seg, 1)),
             $r === 'import' && ($seg[1] ?? '') === 'markdown' && $m === 'POST' => $this->importMarkdown(),
+            $r === 'forms' => $this->forms($m, array_slice($seg, 1)),
             $r === 'users' && $n === 1 && $m === 'GET' => $this->json($this->isAdmin() ? $this->pod->all('SELECT id, username, role, created_at, last_login, totp_enabled FROM _users ORDER BY created_at') : []),
             $r === 'account' && ($seg[1] ?? '') === 'password' => $this->changePassword(),
             $r === 'account' && ($seg[1] ?? '') === 'username' => $this->changeUsername(),
@@ -453,6 +455,62 @@ final class Api
         if ($v === 'false') return false;
         if (is_numeric($v)) return $v + 0;
         return $v;
+    }
+
+    // ───────────────────────── forms (Posteingang) ─────────────────────────
+    private const FORM_STATUSES = ['new', 'read', 'done', 'spam', 'confirmed', 'rejected'];
+
+    /**
+     * POST /api/form/{formId}: Formular-Einsendung speichern. Nicht öffentlich wie bei Orbiter, sondern nur
+     * Server-zu-Server (z. B. anfrage.php der Website) mit Schlüssel `form_token` im Header X-Lander-Token.
+     * Ohne gesetzten Schlüssel ist die Annahme aus.
+     */
+    private function formSubmit(string $formId): void
+    {
+        $token = (string)($this->cfg['form_token'] ?? '');
+        if ($token === '' || !hash_equals($token, (string)($_SERVER['HTTP_X_LANDER_TOKEN'] ?? ''))) { $this->json(['error' => 'Not found'], 404); return; }
+        $b = $this->body();
+        if (!$b || count($b) > 50) { $this->json(['error' => 'Invalid body'], 400); return; }
+        $data = [];
+        foreach ($b as $k => $v) {
+            if (!is_scalar($v) || strlen((string)$k) > 100 || $k === '_honeypot') continue;
+            $data[(string)$k] = mb_substr((string)$v, 0, 5000);
+        }
+        if (!$data) { $this->json(['error' => 'Empty submission'], 400); return; }
+        $id = Pod::uuid();
+        $this->pod->run('INSERT INTO _forms (id, form_id, data, ip, created_at) VALUES (?,?,?,?,?)',
+            [$id, $formId, json_encode($data, JSON_UNESCAPED_UNICODE), null, Pod::now()]);   // keine IP speichern (Datenschutz)
+        $this->json(['ok' => true, 'id' => $id]);
+    }
+
+    /** Posteingang für angemeldete Nutzer: GET /api/forms, GET /api/forms/{formId}, PUT /api/forms/{id}/status, DELETE /api/forms/{id}. */
+    private function forms(string $m, array $seg): void
+    {
+        $n = count($seg);
+        if ($n === 0 && $m === 'GET') {
+            $out = [];
+            foreach ($this->pod->all('SELECT form_id, status, COUNT(*) AS count FROM _forms GROUP BY form_id, status') as $r) {
+                $out[$r['form_id']] ??= ['new' => 0, 'read' => 0, 'done' => 0, 'spam' => 0, 'total' => 0];
+                $out[$r['form_id']][$r['status']] = ($out[$r['form_id']][$r['status']] ?? 0) + (int)$r['count'];
+                $out[$r['form_id']]['total'] += (int)$r['count'];
+            }
+            $this->json($out ?: new stdClass()); return;
+        }
+        if ($n === 1 && $m === 'GET') {
+            $sql = 'SELECT * FROM _forms WHERE form_id = ?'; $a = [$seg[0]];
+            if (!empty($_GET['status'])) { $sql .= ' AND status = ?'; $a[] = (string)$_GET['status']; }
+            $limit = max(1, min((int)($_GET['limit'] ?? 50), 200)); $offset = max(0, (int)($_GET['offset'] ?? 0));
+            $rows = $this->pod->all("$sql ORDER BY created_at DESC LIMIT $limit OFFSET $offset", $a);
+            $this->json(array_map(fn($r) => ['data' => json_decode($r['data'], true) ?: new stdClass()] + $r, $rows)); return;
+        }
+        if ($n === 2 && $seg[1] === 'status' && $m === 'PUT') {
+            $st = (string)($this->body()['status'] ?? '');
+            if (!in_array($st, self::FORM_STATUSES, true)) { $this->json(['error' => 'Invalid status'], 400); return; }
+            $this->pod->run('UPDATE _forms SET status = ? WHERE id = ?', [$st, $seg[0]]);
+            $this->json(['ok' => true]); return;
+        }
+        if ($n === 1 && $m === 'DELETE') { $this->pod->run('DELETE FROM _forms WHERE id = ?', [$seg[0]]); $this->json(['ok' => true]); return; }
+        $this->json(['error' => 'Not available in Lander'], 501);
     }
 
     // ───────────────────────── search ─────────────────────────

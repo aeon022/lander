@@ -15,7 +15,9 @@
     });
     document.querySelectorAll('button').forEach(function (b) {
       if (/^✦ (Translate|Suggest|AI)/.test(b.textContent.trim())) b.style.display = 'none';
+      if (b.hasAttribute('data-open-reply')) b.style.display = 'none';   // Inbox: Antworten aus dem Mailprogramm (Reply-To der Anfrage-Mail)
     });
+    document.querySelectorAll('.snippet-card').forEach(function (d) { d.style.display = 'none'; });   // Inbox: Orbiter-Anleitung passt nicht
   }
   var t; new MutationObserver(function () { clearTimeout(t); t = setTimeout(apply, 30); }).observe(document.documentElement, { childList: true, subtree: true });
   document.addEventListener('DOMContentLoaded', apply);

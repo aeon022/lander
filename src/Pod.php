@@ -50,6 +50,9 @@ final class Pod
             CREATE TABLE IF NOT EXISTS _audit (
               id TEXT PRIMARY KEY, entry_id TEXT NOT NULL, username TEXT NOT NULL, action TEXT NOT NULL,
               created_at TEXT NOT NULL DEFAULT (datetime('now')));
+            CREATE TABLE IF NOT EXISTS _forms (
+              id TEXT PRIMARY KEY, form_id TEXT NOT NULL, data TEXT NOT NULL,
+              status TEXT NOT NULL DEFAULT 'new', ip TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')));
             SQL);
         $this->db->exec("INSERT OR IGNORE INTO _meta (key, value) VALUES ('format_version', '1')");
     }
