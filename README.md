@@ -2,7 +2,7 @@
 
 > Teil von **[Orbiter](https://github.com/aeon022/orbiter)** — „CMS in one POD“ für Astro. Lander ist der Weg für Hosting ohne Node. Überblick: [orbiter.sh/lander](https://orbiter.sh/lander) · Doku: [orbiter.sh/docs/lander](https://orbiter.sh/docs/lander)
 
-**Orbiter auf gewöhnlichem PHP-Hosting.** Orbiter bleibt im Orbit (Node-Server), der Lander setzt auf jedem Webhost mit PHP 8.1+ und SQLite auf. Gleiche `.pod`-Datei, gleiche Station-Oberfläche, kein Node, kein Build-Server.
+**Orbiter auf gewöhnlichem PHP-Hosting.** Orbiter bleibt im Orbit (Node-Server), der Lander setzt auf jedem Webhost mit PHP 8.1+ und SQLite auf. Gleiche SQL-Datei (`.pod` — eine normale SQLite-Datenbank, nur umbenannt), gleiche Station-Oberfläche, kein Node, kein Build-Server.
 
 - **Admin:** die Orbiter-Oberfläche (Station-Modus) unverändert als statische Dateien, dahinter eine PHP-API mit denselben Pfaden und JSON-Formaten.
 - **Live einlesen:** Websites lesen veröffentlichte Inhalte zur Laufzeit über `/api/public/<sammlung>[/<slug>]` (CORS für eingetragene Domains, 60 s Cache). Änderungen sind sofort sichtbar, ohne Neubau.
@@ -25,7 +25,7 @@ docker compose exec -u www-data -w /var/www/lander lander php bin/lander import-
 1. Ordner hochladen, **Document Root auf `public/`** setzen (am besten eigene Subdomain, z. B. `redaktion.example.at`, weil die Oberfläche absolute Pfade nutzt).
 2. `lander.config.php` anlegen (`public_origins` = Website-Domain, `media_url` = volle URL).
 3. `data/` und `public/media/` für PHP beschreibbar machen.
-4. Benutzer per `php bin/lander user …` anlegen (SSH) oder einmalig lokal anlegen und `data/content.pod` hochladen.
+4. Benutzer per `php bin/lander user …` anlegen (SSH) oder einmalig lokal anlegen und die SQL-Datei `data/content.pod` hochladen.
 
 ## Website anbinden
 
@@ -40,7 +40,7 @@ const termine = await fetch('https://redaktion.example.at/api/public/termine').t
 | | Orbiter | Lander |
 |---|---|---|
 | Laufzeit | Node (Hono) | PHP 8.1+ (PDO SQLite) |
-| Medien | BLOB im Pod oder S3 | Dateien im Ordner |
+| Medien | BLOB in der SQL-Datei oder S3 | Dateien im Ordner |
 | Passwörter | scrypt | `password_hash` (Orbiter-Benutzer: `bin/lander passwd`) |
 | Bereiche | alle | Dashboard, Sammlungen, Einträge, Editor, Medien, Import, Einstellungen, Konto |
 | Posteingang (Inbox): Einsendungen speichern, Status, Löschen | ja | ja, Annahme nur Server-zu-Server mit `form_token` (keine öffentliche Formular-API, kein Antworten aus dem Admin) |
