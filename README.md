@@ -35,6 +35,16 @@ const termine = await fetch('https://redaktion.example.at/api/public/termine').t
 // Build-Zeit (SEO, Astro): dieselbe URL im Frontmatter abfragen.
 ```
 
+## Backup & Wiederherstellen (Umzug)
+
+Einstellungen → Pod → **Backup & restore** (nur Admins):
+
+- **SQL-Datei (.pod):** konsistente Kopie der Datenbank ohne Sitzungen. Klein, schnell.
+- **Mit Medien (ZIP):** `content.pod` plus `media/…` (braucht die PHP-Erweiterung `zip`).
+- **Restore:** `.pod` oder Backup-ZIP hochladen. Der Server prüft die Datei (SQLite, Integrität, Tabellen, mindestens ein Admin), legt vorher eine Kopie ab (`data/before-restore-*.pod`, die letzten 3), ersetzt den Pod, entpackt Medien (nur Bilder/PDF, echter Dateityp) und schreibt Pfade/URLs für den neuen Host um. Danach Abmeldung.
+- Limits: `max_restore_mb` (Standard 100) und die PHP-Werte `upload_max_filesize` / `post_max_size`. Große Medien-ZIPs lieber per FTP einspielen.
+- Backups enthalten Passwort-Hashes: privat aufbewahren.
+
 ## Unterschiede zu Orbiter
 
 | | Orbiter | Lander |

@@ -25,3 +25,8 @@
 ## 2026-11-15 — Settings-Layout aus Orbiter (ba10dbd3)
 - `public/settings.html`: Sektionen (You/General/Content/Publishing/System), ausgeglichene Spalten, einklappbare Karten, Sprungleiste. Patch 1:1 aus Orbiter übernommen.
 - Getestet im Docker-Scratch (PHP 8.3/Apache, Port 8097; 8088 belegt durch den echten lander-Container): 15 Karten, keine Konsolenfehler, kein Überlauf (xfce/glass/classic 1440, xfce 390). Speichern nicht separat getestet (Logik unverändert).
+
+## 2026-11-15 — Backup/Restore
+- `src/Backup.php`, Routen `GET /api/backup[?media=1]`, `POST /api/restore` (Admin). Settings → Pod: Download SQL-Datei / ZIP, Restore mit Bestätigung.
+- Getestet (Docker, PHP 8.3): SQL- und ZIP-Backup, Restore (SQL und ZIP, 45 Medien), kaputte/fremde Dateien (422), ZIP mit `..`-Pfaden und `.php`/Fake-PNG (abgewiesen), Sitzungen nach Restore ungültig, UI-Durchlauf (Upload → Meldung → Login). Nicht getestet: Editor-Rolle (403 per Code-Review), echter Shared Host (PHP-Limits, Zeitlimit bei großen ZIPs), Orbiter-Pod mit BLOB-Medien.
+- `lander.js` blendet leere Settings-Abschnitte samt Chip aus (Publishing).

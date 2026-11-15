@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/Pod.php';
+require_once __DIR__ . '/Backup.php';
 
 /**
  * Lander API: the subset of Orbiter's admin API (packages/admin/src/routes) the Station UI needs,
@@ -38,7 +39,7 @@ final class Api
             $this->pod = new Pod($this->cfg['pod']);
             if ($method === 'POST' && preg_match('#^/api/form/([a-z0-9_-]{1,64})$#', $path, $fm)) { $this->formSubmit($fm[1]); return; }
             if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true) && !$this->sameOrigin()) { $this->json(['error' => 'CSRF check failed'], 403); return; }
-            if (in_array($method, ['POST', 'PUT', 'PATCH'], true) && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > ((int)($this->cfg['max_upload_mb'] ?? 12) + 1) * 1048576) { $this->json(['error' => 'Payload too large'], 413); return; }
+            if (in_array($method, ['POST', 'PUT', 'PATCH'], true) && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > ((int)($this->cfg[$path === '/api/restore' ? 'max_restore_mb' : 'max_upload_mb'] ?? ($path === '/api/restore' ? 100 : 12)) + 1) * 1048576) { $this->json(['error' => 'Payload too large'], 413); return; }
 
             if ($method === 'POST' && $path === '/api/auth/login') { $this->login(); return; }
             if ($method === 'GET' && $path === '/api/brand') { $this->json(['name' => $this->pod->getMeta('site.name'), 'product' => 'Lander']); return; }
@@ -77,6 +78,8 @@ final class Api
             $r === 'media' => $this->media($m, array_slice($seg, 1)),
             $r === 'import' && ($seg[1] ?? '') === 'markdown' && $m === 'POST' => $this->importMarkdown(),
             $r === 'forms' => $this->forms($m, array_slice($seg, 1)),
+            $r === 'backup' && $m === 'GET' => $this->backup(),
+            $r === 'restore' && $m === 'POST' => $this->restore(),
             $r === 'users' && $n === 1 && $m === 'GET' => $this->json($this->isAdmin() ? $this->pod->all('SELECT id, username, role, created_at, last_login, totp_enabled FROM _users ORDER BY created_at') : []),
             $r === 'account' && ($seg[1] ?? '') === 'password' => $this->changePassword(),
             $r === 'account' && ($seg[1] ?? '') === 'username' => $this->changeUsername(),
@@ -411,6 +414,26 @@ final class Api
         $this->pod->run('INSERT INTO _media (id, filename, mime_type, size, data, alt, folder, url, path) VALUES (?,?,?,?,NULL,?,?,?,?)',
             [$id, $name, $type, filesize($path), $_POST['alt'] ?? null, $folder, $url, $path]);
         $this->json($this->pod->one('SELECT id, filename, mime_type, size, alt, folder, url, focal_x, focal_y, created_at FROM _media WHERE id = ?', [$id]), 201);
+    }
+
+    // ───────────────────────── backup / restore (admin) ─────────────────────────
+    private function backup(): void
+    {
+        if (!$this->isAdmin()) { $this->json(['error' => 'Admins only'], 403); return; }
+        Backup::download($this->cfg, $this->pod, ($_GET['media'] ?? '') === '1');
+    }
+
+    private function restore(): void
+    {
+        if (!$this->isAdmin()) { $this->json(['error' => 'Admins only'], 403); return; }
+        $f = $_FILES['file'] ?? null;
+        if (!$f && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) { $this->json(['error' => 'File exceeds the PHP limit (post_max_size / upload_max_filesize): raise it in php.ini or .user.ini'], 413); return; }
+        if (!$f || ($f['error'] ?? 1) !== UPLOAD_ERR_OK) {
+            $tooBig = in_array($f['error'] ?? 0, [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true);
+            $this->json(['error' => $tooBig ? 'File exceeds the PHP upload limit (upload_max_filesize / post_max_size)' : 'No file provided'], $tooBig ? 413 : 400); return;
+        }
+        $res = Backup::restore($this->cfg, $this->pod, $f['tmp_name']);
+        $this->json($res, $res['ok'] ? 200 : 422);
     }
 
     // ───────────────────────── markdown import ─────────────────────────

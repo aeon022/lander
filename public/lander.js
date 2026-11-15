@@ -17,6 +17,11 @@
       if (/^✦ (Translate|Suggest|AI)/.test(b.textContent.trim())) b.style.display = 'none';
       if (b.hasAttribute('data-open-reply')) b.style.display = 'none';   // Inbox: Antworten aus dem Mailprogramm (Reply-To der Anfrage-Mail)
     });
+    document.querySelectorAll('.set-sec').forEach(function (sec) {   // Einstellungen: Abschnitt ohne sichtbare Karte (samt Sprung-Chip) ausblenden
+      var none = ![].some.call(sec.querySelectorAll('.settings-group'), function (g) { return g.style.display !== 'none'; });
+      sec.style.display = none ? 'none' : '';
+      var chip = document.querySelector('.set-nav [data-sec="' + sec.id.slice(4) + '"]'); if (chip) chip.style.display = none ? 'none' : '';
+    });
     document.querySelectorAll('.snippet-card').forEach(function (d) { d.style.display = 'none'; });   // Inbox: Orbiter-Anleitung passt nicht
   }
   var t; new MutationObserver(function () { clearTimeout(t); t = setTimeout(apply, 30); }).observe(document.documentElement, { childList: true, subtree: true });
