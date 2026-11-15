@@ -5,6 +5,7 @@ require_once __DIR__ . '/Pod.php';
 require_once __DIR__ . '/Backup.php';
 require_once __DIR__ . '/Rebase.php';
 require_once __DIR__ . '/Image.php';
+require_once __DIR__ . '/Updater.php';
 
 /**
  * Lander API: the subset of Orbiter's admin API (packages/admin/src/routes) the Station UI needs,
@@ -13,7 +14,7 @@ require_once __DIR__ . '/Image.php';
  */
 final class Api
 {
-    public const VERSION = '0.3.0';
+    public const VERSION = '0.3.1';
     private Pod $pod;
     private ?array $user = null;
     private const STATUSES = ['draft', 'in_review', 'published', 'scheduled'];
@@ -81,7 +82,8 @@ final class Api
             $r === 'media' => $this->media($m, array_slice($seg, 1)),
             $r === 'import' && ($seg[1] ?? '') === 'markdown' && $m === 'POST' => $this->importMarkdown(),
             $r === 'forms' => $this->forms($m, array_slice($seg, 1)),
-            $r === 'update' && $m === 'GET' => $this->updateCheck(),
+            $r === 'update' && $n === 1 && $m === 'GET' => $this->updateCheck(),
+            $r === 'update' && ($seg[1] ?? '') === 'apply' && $m === 'POST' => $this->updateApply(),
             $r === 'backup' && $m === 'GET' => $this->backup(),
             $r === 'restore' && $m === 'POST' => $this->restore(),
             $r === 'users' => $this->users($m, array_slice($seg, 1)),
@@ -426,7 +428,8 @@ final class Api
     private function updateCheck(): void
     {
         if (!$this->isAdmin()) { $this->json(['error' => 'Admins only'], 403); return; }
-        $out = ['current' => self::VERSION, 'latest' => null, 'available' => false, 'url' => null, 'notes' => null, 'checkedAt' => null, 'enabled' => ($this->cfg['update_check'] ?? true) !== false];
+        $out = ['current' => self::VERSION, 'latest' => null, 'available' => false, 'url' => null, 'notes' => null, 'checkedAt' => null, 'enabled' => ($this->cfg['update_check'] ?? true) !== false, 'canApply' => false, 'whyNot' => []];
+        $cap = Updater::capability(dirname(__DIR__)); $out['canApply'] = $cap['ok']; $out['whyNot'] = $cap['why'];
         if (!$out['enabled']) { $this->json($out); return; }
         $cache = rtrim($this->cfg['data_dir'], '/') . '/update-check.json';
         $c = is_file($cache) ? json_decode((string)@file_get_contents($cache), true) : null;
@@ -453,6 +456,17 @@ final class Api
         $out['available'] = $latest !== null && preg_match('/^\d+(\.\d+){1,3}$/', $latest) === 1 && version_compare($latest, self::VERSION, '>');
         if (!empty($c['error'])) $out['error'] = $c['error'];
         $this->json($out);
+    }
+
+    /** POST /api/update/apply: signed one-click update (see Updater). Admins only. */
+    private function updateApply(): void
+    {
+        if (!$this->isAdmin()) { $this->json(['error' => 'Admins only'], 403); return; }
+        if (($this->cfg['update_check'] ?? true) === false) { $this->json(['error' => 'Updates are switched off (update_check)'], 403); return; }
+        try { $r = Updater::apply($this->cfg, $this->pod, dirname(__DIR__), self::VERSION); }
+        catch (Throwable $e) { $this->json(['error' => $e->getMessage()], 400); return; }
+        @unlink(rtrim($this->cfg['data_dir'], '/') . '/update-check.json');
+        $this->json(['ok' => true] + $r);
     }
 
     // ───────────────────────── users (admin) ─────────────────────────

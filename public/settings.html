@@ -1055,11 +1055,19 @@
           if (!u || !u.current) return;
           let t = 'Lander <b>' + e(u.current) + '</b>';
           if (!u.enabled) t += ' · update check is off';
-          else if (u.available) t += ' · <b style="color:var(--gold, #e0a030)">version ' + e(u.latest) + ' is available</b> — <a href="' + e(u.url) + '" target="_blank" rel="noopener" style="color:var(--accent)">download &amp; release notes</a> (replace the files; keep <code>data/</code>, <code>public/media/</code> and <code>lander.config.php</code>)';
+          else if (u.available) t += ' · <b style="color:var(--gold, #e0a030)">version ' + e(u.latest) + ' is available</b> — <a href="' + e(u.url) + '" target="_blank" rel="noopener" style="color:var(--accent)">download &amp; release notes</a>' + (u.canApply ? ' · <a href="#" id="update-apply" style="color:var(--accent);font-weight:600">Update now</a> (signed release, backup first)' : ' (replace the files by hand; keep <code>data/</code>, <code>public/media/</code> and <code>lander.config.php</code>' + (u.whyNot && u.whyNot.length ? '; automatic update off: ' + e(u.whyNot.join(', ')) : '') + ')');
           else if (u.latest) t += ' · up to date';
           else t += ' · could not check for updates';
           el.innerHTML = t + ' · <a href="#" id="update-refresh" style="color:var(--accent)">check now</a>';
           document.getElementById('update-refresh').addEventListener('click', (ev) => { ev.preventDefault(); load(true); });
+          const ap = document.getElementById('update-apply');
+          if (ap) ap.addEventListener('click', async (ev) => {
+            ev.preventDefault();
+            if (!confirm('Update Lander to ' + u.latest + '? A backup of the content and the code is saved first.')) return;
+            ap.textContent = 'Updating…';
+            try { const j = await (await fetch('/api/update/apply', { method: 'POST', credentials: 'include' })).json(); if (j.ok) { location.reload(); return; } alert(j.error || 'Update failed'); } catch { alert('Update failed'); }
+            ap.textContent = 'Update now';
+          });
         };
         const load = (refresh) => fetch('/api/update' + (refresh ? '?refresh=1' : ''), { credentials: 'include' }).then((r) => r.json()).then(show).catch(() => {});
         load(false);

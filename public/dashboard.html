@@ -195,6 +195,7 @@
       <!-- Lander: hint when a newer release exists (admins only) -->
       <div id="update-hint" class="glass-card" style="display:none;padding:12px 18px;font-size:13px;line-height:1.5;border-color:var(--amber, #f59e0b)">
         <span id="update-hint-text"></span> <a id="update-hint-link" href="#" target="_blank" rel="noopener" style="color:var(--accent)">Release notes →</a>
+        <button id="update-now" type="button" class="btn" style="display:none;margin-left:10px">Update now</button>
       </div>
       <script>
         (function () {
@@ -203,6 +204,17 @@
             document.getElementById('update-hint-text').textContent = 'Lander ' + u.latest + ' is available (you have ' + u.current + ').';
             if (u.url) document.getElementById('update-hint-link').href = u.url;
             document.getElementById('update-hint').style.display = '';
+            var b = document.getElementById('update-now');
+            if (!u.canApply) return;
+            b.style.display = '';
+            b.addEventListener('click', function () {
+              if (!confirm('Update Lander to ' + u.latest + '? A backup of the content and the code is saved first.')) return;
+              b.disabled = true; b.textContent = 'Updating…';
+              fetch('/api/update/apply', { method: 'POST', credentials: 'include' }).then(function (r) { return r.json(); }).then(function (j) {
+                if (j.ok) { b.textContent = 'Done – reloading'; setTimeout(function () { location.reload(); }, 800); }
+                else { b.disabled = false; b.textContent = 'Update now'; alert(j.error || 'Update failed'); }
+              }).catch(function () { b.disabled = false; b.textContent = 'Update now'; alert('Update failed'); });
+            });
           }).catch(function () {});
         })();
       </script>

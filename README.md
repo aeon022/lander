@@ -33,7 +33,7 @@ The content lives in one SQL file (`content.pod`, a plain SQLite database, only 
 - **Installer:** open `install.php` once. It detects subfolder or domain root, writes the config, creates the first admin and deletes itself.
 - **Subfolder or subdomain:** `example.at/lander/` works as well as `redaktion.example.at`.
 - **Backup, restore, move:** automatic weekly backups, download as SQL file or ZIP with media, restore with validation, `bin/lander backup` for cron.
-- **Update hint:** the admin tells admins when a newer release is out (read-only; you replace the files yourself).
+- **One-click update:** the admin tells admins when a newer release is out and can install it with one click. Every release ZIP is signed (Ed25519) and checked against the key built into Lander before anything is written. A backup of the pod and the code is saved first (`data/update-rollback/`). Needs the PHP `zip` and `sodium` extensions; otherwise you replace the files by hand.
 - **Users:** admins add editors and admins in the admin (Users page): create, change role, reset password, delete.
 - **Inbox:** form submissions server-to-server with a token.
 - **Hardened:** CSRF origin check, login throttling, escaped output, validated uploads, admin-only meta writes, request size limits. Sessions are HttpOnly, SameSite=Strict cookies.
@@ -103,7 +103,7 @@ Add your site's origin to `public_origins` in the config so browsers may read th
 | `max_upload_mb`, `max_restore_mb` | upload and restore limits |
 | `auto_backup_days`, `auto_backup_keep` | automatic backups (`0` days = off) |
 | `public_cache_seconds` | how long browsers and proxies may reuse `/api/public/...` answers (default 10; `0` = no cache): edits go live after at most this long |
-| `update_check` | ask GitHub (at most every 12 h) whether a newer release exists and show a hint in the admin; `false` = never connect |
+| `update_check` | ask GitHub (at most every 12 h) whether a newer release exists, show a hint and the “Update now” button in the admin; `false` = never connect and no update button |
 | `form_token` | accepts form submissions (`POST /api/form/{id}`, header `X-Lander-Token`) |
 | `public_origins` | sites that may read `/api/public/...` from the browser (CORS) |
 

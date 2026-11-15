@@ -6,3 +6,4 @@ stage.md export-ignore
 docker-compose.yml export-ignore
 assets export-ignore
 og-card.png export-ignore
+scripts export-ignore
