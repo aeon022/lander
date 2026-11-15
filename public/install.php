@@ -62,14 +62,14 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && $ok) {
 }
 $origin = (($_SERVER['HTTPS'] ?? '') === 'on' ? 'https://' : 'http://') . ($_SERVER['HTTP_HOST'] ?? '');
 ?><!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Install Lander</title>
-<style>body{font:16px/1.5 system-ui,sans-serif;background:#0b1020;color:#dbe4ff;margin:0;padding:32px 16px}main{max-width:520px;margin:0 auto}h1{margin:0 0 4px}label{display:block;margin:14px 0 4px;font-size:14px;color:#9fb0d9}input{width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid #2a3560;background:#121a36;color:#fff;font:inherit}button{margin-top:20px;padding:11px 22px;border:0;border-radius:999px;background:#e0a030;color:#111;font-weight:700;cursor:pointer}.ok{color:#4ade80}.bad{color:#f87171}.card{background:#121a36;border:1px solid #2a3560;border-radius:12px;padding:16px;margin:16px 0}code{background:#0b1020;padding:2px 6px;border-radius:4px}small{color:#9fb0d9}</style></head><body><main>
+<style>body{font:16px/1.5 system-ui,sans-serif;background:#0b1020;color:#dbe4ff;margin:0;padding:32px 16px}main{max-width:760px;margin:0 auto}h1{margin:0 0 4px}label{display:block;margin:14px 0 4px;font-size:14px;color:#9fb0d9}input{width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid #2a3560;background:#121a36;color:#fff;font:inherit}button{margin-top:20px;padding:11px 22px;border:0;border-radius:999px;background:#e0a030;color:#111;font-weight:700;cursor:pointer}.ok{color:#4ade80}.bad{color:#f87171}.card{background:#121a36;border:1px solid #2a3560;border-radius:12px;padding:16px;margin:16px 0}code{background:#0b1020;padding:2px 6px;border-radius:4px;overflow-wrap:anywhere;word-break:break-word}.cmd{display:block;margin-top:8px;padding:10px 12px;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-all}small{color:#9fb0d9}</style></head><body><main>
 <h1>Lander</h1><p style="margin-top:0;color:#9fb0d9">Orbiter on PHP hosting</p>
 <?php if ($installed): ?>
   <div class="card"><b>Lander is already installed.</b><br>This installer has removed itself. <a style="color:#e0a030" href="<?= $h($base) ?>/login.html">Go to the login</a>.</div>
 <?php elseif ($done): ?>
   <div class="card"><b class="ok">Installed.</b> The installer has deleted itself.<br><br>
     Admin: <b><?= $h($origin . $base) ?>/login.html</b><br><small>Install location: <code><?= $h($base === '' ? '/ (root of this domain)' : $base . '/') ?></code></small></div>
-  <div class="card"><b>Backups</b><br>Lander saves a backup to <code>data/backups/</code> about once a week when an admin signs in. For a fixed schedule add a cron job:<br><code>0 3 * * * php <?= $h($root) ?>/bin/lander backup</code></div>
+  <div class="card"><b>Backups</b><br>Lander saves a backup to <code>data/backups/</code> about once a week when an admin signs in. For a fixed schedule add a cron job:<br><code class="cmd">0 3 * * * php <?= $h($root) ?>/bin/lander backup</code></div>
   <p><a style="color:#e0a030" href="<?= $h($base) ?>/login.html">Sign in →</a></p>
 <?php else: ?>
   <div class="card"><b>Check</b><?php foreach ($checks as $k => $v): ?><div class="<?= $v ? 'ok' : 'bad' ?>"><?= $v ? '✓' : '✗' ?> <?= $h($k) ?></div><?php endforeach; ?>
