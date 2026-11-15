@@ -1,5 +1,7 @@
 # Lander
 
+> Teil von **[Orbiter](https://github.com/aeon022/orbiter)** — „CMS in one POD“ für Astro. Lander ist der Weg für Hosting ohne Node. Überblick: [orbiter.sh/lander](https://orbiter.sh/lander) · Doku: [orbiter.sh/docs/lander](https://orbiter.sh/docs/lander)
+
 **Orbiter auf gewöhnlichem PHP-Hosting.** Orbiter bleibt im Orbit (Node-Server), der Lander setzt auf jedem Webhost mit PHP 8.1+ und SQLite auf. Gleiche `.pod`-Datei, gleiche Station-Oberfläche, kein Node, kein Build-Server.
 
 - **Admin:** die Orbiter-Oberfläche (Station-Modus) unverändert als statische Dateien, dahinter eine PHP-API mit denselben Pfaden und JSON-Formaten.
