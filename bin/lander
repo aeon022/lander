@@ -2,6 +2,7 @@
 <?php
 declare(strict_types=1);
 // Lander CLI:  bin/lander user <name> [admin|editor]   ·   bin/lander passwd <name>   ·   bin/lander collection <id> <label> [singleton]
+//              bin/lander rebase [/unterordner]   ·   bin/lander backup [--media] [--keep=N]
 //              bin/lander import-md <collection> <ordner> [--overwrite]   ·   bin/lander import-media <ordner> <medienordner>
 require dirname(__DIR__) . '/src/Api.php';
 $cfg = require dirname(__DIR__) . '/lander.config.php';
@@ -57,6 +58,20 @@ switch ($cmd) {
             $n++;
         }
         echo "{$n} Dateien in «{$folder}» importiert\n"; break;
+    case 'rebase':
+        // UI-Pfade für einen Unterordner anpassen (z. B. /lander); ohne Angabe: base_path aus der Konfiguration
+        $target = $a ?? ($cfg['base_path'] ?? '');
+        $r = Rebase::run(dirname(__DIR__) . '/public', (string)$target);
+        echo "Basis «" . (Rebase::normalize((string)$target) ?: '/') . "»: {$r['changed']} von {$r['files']} Dateien angepasst\n";
+        if ($r['left']) echo "Hinweis, nicht angepasst: " . implode(', ', $r['left']) . "\n";
+        echo "Denk daran: lander.config.php → 'base_path' und 'media_url' passend setzen.\n"; break;
+    case 'backup':
+        $withMedia = in_array('--media', [$a, $b, $c], true);
+        $keep = 8; foreach ([$a, $b, $c] as $x) if (is_string($x) && preg_match('/^--keep=(\d+)$/', $x, $m)) $keep = (int)$m[1];
+        $dir = rtrim($cfg['data_dir'], '/') . '/backups'; if (!is_dir($dir)) mkdir($dir, 0750, true);
+        $ext = $withMedia ? 'zip' : 'pod'; $dest = "$dir/cli-" . gmdate('Y-m-d_His') . ".$ext";
+        Backup::make($cfg, $pod, $withMedia, $dest); Backup::rotate("$dir/cli-*.$ext", $keep);
+        echo "Backup: $dest (" . round(filesize($dest) / 1048576, 1) . " MB)\n"; break;
     default:
-        echo "Befehle: user, passwd, collection, import-md, import-media\n";
+        echo "Befehle: user, passwd, collection, import-md, import-media, rebase, backup\n";
 }

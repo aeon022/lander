@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/Pod.php';
 require_once __DIR__ . '/Backup.php';
+require_once __DIR__ . '/Rebase.php';
+require_once __DIR__ . '/Image.php';
 
 /**
  * Lander API: the subset of Orbiter's admin API (packages/admin/src/routes) the Station UI needs,
@@ -120,8 +122,9 @@ final class Api
         $this->pod->run('INSERT INTO _sessions (token, user_id, expires_at, ip, ua) VALUES (?,?,?,?,?)',
             [$token, $u['id'], gmdate('Y-m-d H:i:s', time() + 30 * 86400), $ip, substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 200)]);
         $this->pod->run("UPDATE _users SET last_login = datetime('now') WHERE id = ?", [$u['id']]);
+        if ($u['role'] === 'admin') Backup::auto($this->cfg, $this->pod);
         if (password_needs_rehash($u['password'], PASSWORD_DEFAULT)) $this->pod->run('UPDATE _users SET password = ? WHERE id = ?', [password_hash($pass, PASSWORD_DEFAULT), $u['id']]);
-        setcookie('orb_sess', $token, ['expires' => time() + 30 * 86400, 'path' => '/', 'httponly' => true, 'samesite' => 'Strict', 'secure' => $this->https()]);
+        setcookie('orb_sess', $token, ['expires' => time() + 30 * 86400, 'path' => $this->cookiePath(), 'httponly' => true, 'samesite' => 'Strict', 'secure' => $this->https()]);
         $this->json(['ok' => true, 'user' => ['id' => $u['id'], 'username' => $u['username'], 'role' => $u['role']]]);
     }
 
@@ -129,7 +132,7 @@ final class Api
     {
         $t = $_COOKIE['orb_sess'] ?? '';
         if ($t !== '') $this->pod->run('DELETE FROM _sessions WHERE token = ?', [$t]);
-        setcookie('orb_sess', '', ['expires' => 1, 'path' => '/', 'httponly' => true, 'samesite' => 'Strict', 'secure' => $this->https()]);
+        setcookie('orb_sess', '', ['expires' => 1, 'path' => $this->cookiePath(), 'httponly' => true, 'samesite' => 'Strict', 'secure' => $this->https()]);
         $this->json(['ok' => true]);
     }
 
@@ -188,7 +191,7 @@ final class Api
             'siteName' => $this->pod->getMeta('site.name'),
             'podSize' => @filesize($this->cfg['pod']) ?: 0,
             'formatVersion' => $this->pod->getMeta('format_version') ?? '1',
-            'adminVersion' => 'Lander 0.1.0 · Oberfläche Orbiter 0.3.90',
+            'adminVersion' => 'Lander 0.2.0 · Oberfläche Orbiter 0.3.95',
             'collections' => $cols,
             'nav' => ['hidden' => array_values(array_filter(array_map('trim', explode(',', $hidden)))), 'groups' => json_decode($this->pod->getMeta('nav.groups') ?? 'null', true)],
         ]);
@@ -377,7 +380,7 @@ final class Api
         if ($id === null && $m === 'POST') { $this->upload(); return; }
         $item = $id ? $this->pod->one('SELECT * FROM _media WHERE id = ?', [$id]) : null;
         if (!$item) { $this->json(['error' => 'Not found'], 404); return; }
-        if (($seg[1] ?? '') === 'raw') { header('Location: ' . $item['url'], true, 302); return; }
+        if (($seg[1] ?? '') === 'raw') { if (Image::wanted() && Image::serve($item, rtrim($this->cfg['data_dir'], '/') . '/cache/media')) return; header('Location: ' . $item['url'], true, 302); return; }
         if ($m === 'PUT') {
             $b = $this->body();
             if (array_key_exists('alt', $b)) $this->pod->run('UPDATE _media SET alt = ? WHERE id = ?', [$b['alt'] === null ? null : mb_substr((string)$b['alt'], 0, 500), $id]);
@@ -581,6 +584,12 @@ final class Api
         if ($method !== 'GET') { $this->json(['error' => 'Method not allowed'], 405); return; }
         [$col, $slug] = array_pad(array_map('rawurldecode', explode('/', trim($rest, '/'), 2)), 2, null);
         $pod = new Pod($this->cfg['pod']);
+        if ($col === 'media' && $slug) {   // GET /api/public/media/<id>?w=800&ar=16:9&fmt=webp : resized image for websites
+            $m = $pod->one("SELECT * FROM _media WHERE id = ? AND mime_type LIKE 'image/%'", [$slug]);
+            if (!$m) { $this->json(['error' => 'Not found'], 404); return; }
+            if (Image::wanted() && Image::serve($m, rtrim($this->cfg['data_dir'], '/') . '/cache/media')) return;
+            header('Location: ' . $m['url'], true, 302); return;
+        }
         $c = $col ? $pod->collection($col) : null;
         if (!$c) { $this->json(['error' => 'Not found'], 404); return; }
         $locale = isset($_GET['locale']) ? (string)$_GET['locale'] : null;
@@ -613,6 +622,7 @@ final class Api
     }
 
     // ───────────────────────── utilities ─────────────────────────
+    private function cookiePath(): string { return ($this->cfg['base_path'] ?? '') . '/'; }
     private function isAdmin(): bool { return ($this->user['role'] ?? '') === 'admin'; }
     private function https(): bool { return ($_SERVER['HTTPS'] ?? '') === 'on' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https'; }
 

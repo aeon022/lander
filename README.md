@@ -20,12 +20,25 @@ docker compose exec -u www-data lander php bin/lander collection blog "Blog"
 docker compose exec -u www-data -w /var/www/lander lander php bin/lander import-media <ordner> <medienordner>
 ```
 
-## Auf den Server
+## Auf den Server (Installer)
 
-1. Ordner hochladen, **Document Root auf `public/`** setzen (am besten eigene Subdomain, z. B. `redaktion.example.at`, weil die Oberfläche absolute Pfade nutzt).
-2. `lander.config.php` anlegen (`public_origins` = Website-Domain, `media_url` = volle URL).
-3. `data/` und `public/media/` für PHP beschreibbar machen.
-4. Benutzer per `php bin/lander user …` anlegen (SSH) oder einmalig lokal anlegen und die SQL-Datei `data/content.pod` hochladen.
+1. Den Ordner hochladen: entweder in einen **Unterordner** der Website (z. B. `psychiaterin-graz.at/lander/`) oder auf eine **Subdomain** (Document Root = `public/`).
+2. `…/install.php` im Browser öffnen (im Unterordner `…/lander/install.php`). Der Installer prüft PHP, erkennt **selbst, ob Unterordner oder Domain-Wurzel**, legt `lander.config.php`, den Pod und den ersten Admin an, passt die Oberfläche an den Ordner an und **löscht sich danach selbst**.
+3. Anmelden, fertig. Backups (siehe unten) laufen von selbst.
+
+Im Unterordner leitet die `.htaccess` im Lander-Ordner alles nach `public/` um; `src/`, `data/` (die `.pod`) und `lander.config.php` sind von außen nicht erreichbar. Voraussetzung: Apache mit `mod_rewrite` und `AllowOverride All`, wie bei fast jedem Webhost. Auf Nginx die Pfade außerhalb von `public/` selbst sperren.
+
+Manuell: `lander.config.example.php` kopieren, `base_path` setzen, `php bin/lander rebase /lander`, Benutzer mit `php bin/lander user <name> admin`.
+
+## Backup, Wiederherstellen, Umzug
+
+- **Automatisch:** Beim Login eines Admins sichert Lander, wenn das letzte Backup älter als `auto_backup_days` (7) ist, nach `data/backups/auto-*.pod` und behält `auto_backup_keep` (8). Ohne Cron.
+- **Cron / Hand:** `php bin/lander backup [--media] [--keep=N]` (`--media` = ZIP mit Bildern).
+- **Admin:** Einstellungen → Pod → Backup & restore (Download, Restore). Restore prüft die Datei, sichert den alten Pod vorher (`data/before-restore-*.pod`) und passt Medienpfade an den neuen Host an. So zieht man auch um (Unterordner ↔ Subdomain: `php bin/lander rebase …`).
+
+## Bildgrößen
+
+`/api/public/media/<id>?w=800&ar=16:9&fmt=webp` liefert ein skaliertes, optional zugeschnittenes (Fokuspunkt aus der Mediathek) und umkodiertes Bild. Breiten rasten auf feste Stufen ein (160 … 2400), Seitenverhältnisse und Formate (`jpg`, `png`, `webp`, `avif`) sind begrenzt, es wird nie hochskaliert. Varianten liegen in `data/cache/media/`. Braucht PHP `gd`; ohne gd wird das Original ausgeliefert.
 
 ## Website anbinden
 

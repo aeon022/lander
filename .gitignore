@@ -4,3 +4,4 @@ data/*
 public/media/*
 !public/media/.htaccess
 .DS_Store
+public/.base

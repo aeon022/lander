@@ -30,3 +30,11 @@
 - `src/Backup.php`, Routen `GET /api/backup[?media=1]`, `POST /api/restore` (Admin). Settings → Pod: Download SQL-Datei / ZIP, Restore mit Bestätigung.
 - Getestet (Docker, PHP 8.3): SQL- und ZIP-Backup, Restore (SQL und ZIP, 45 Medien), kaputte/fremde Dateien (422), ZIP mit `..`-Pfaden und `.php`/Fake-PNG (abgewiesen), Sitzungen nach Restore ungültig, UI-Durchlauf (Upload → Meldung → Login). Nicht getestet: Editor-Rolle (403 per Code-Review), echter Shared Host (PHP-Limits, Zeitlimit bei großen ZIPs), Orbiter-Pod mit BLOB-Medien.
 - `lander.js` blendet leere Settings-Abschnitte samt Chip aus (Publishing).
+
+## 2026-11-15 — Unterordner, Installer, Auto-Backup, Bildgrößen (0.2.0)
+- `src/Rebase.php` + `bin/lander rebase`: schreibt absolute UI-Pfade (/api/, /*.html|js|css|svg) auf `base_path` um, idempotent (`public/.base`). `index.php` strippt den Basispfad, Cookie-Pfad = Basis. Root-`.htaccess` leitet im Unterordner alles nach `public/` (nur dort erreichbar).
+- `public/install.php`: erkennt Unterordner/Wurzel, schreibt Config + Pod + Admin, rebase, löscht sich selbst.
+- Auto-Backup (`Backup::auto` nach Admin-Login, `data/backups/`), `bin/lander backup [--media] [--keep]`.
+- `src/Image.php`: `?w&ar&fmt` für `/api/media/:id/raw` und `/api/public/media/:id`, Stufen/Whitelists, Cache in `data/cache/media`.
+- Getestet (Docker PHP 8.3, Apache, Unterordner /lander/ und flach): Installer, Login/Navigation ohne 404 außerhalb /lander/, Cookie-Pfad, gesperrte Pfade (src, bin, config, .pod), Rebase 2× idempotent, Bildvarianten (webp/png/jpg, Snap, Cache), Auto- und CLI-Backup (.pod, .zip), flache Installation unverändert (Settings-Test).
+- Nicht getestet: echter Shared Host, Nginx, `AllowOverride None`-Hosts, PHP ohne gd (Fallback per Code), Restore im Unterordner, Windows-Pfade.

@@ -156,5 +156,50 @@ final class Backup
         }
     }
 
+    /** Write a backup to $dest (a .pod, or a .zip with media). Used by the CLI and the automatic backup. */
+    public static function make(array $cfg, Pod $pod, bool $withMedia, string $dest): void
+    {
+        @set_time_limit(0);
+        $tmp = $dest . '.tmp';
+        self::snapshot($pod, $cfg['pod'], $tmp);
+        if (!$withMedia) { rename($tmp, $dest); return; }
+        if (!class_exists('ZipArchive')) { @unlink($tmp); throw new RuntimeException('PHP zip extension missing'); }
+        $z = new ZipArchive();
+        if ($z->open($dest, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) { @unlink($tmp); throw new RuntimeException('Cannot create ZIP'); }
+        $z->addFile($tmp, 'content.pod');
+        $root = realpath($cfg['media_dir']);
+        if ($root) foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS)) as $f) {
+            if ($f->isFile() && !$f->isLink() && in_array(strtolower($f->getExtension()), self::MEDIA_EXT, true)) $z->addFile($f->getPathname(), 'media/' . ltrim(substr($f->getPathname(), strlen($root)), '/'));
+        }
+        $z->close();
+        @unlink($tmp);
+    }
+
+    /** Keep only the newest $keep files matching $glob. */
+    public static function rotate(string $glob, int $keep): void
+    {
+        $all = glob($glob) ?: []; rsort($all);
+        foreach (array_slice($all, max(1, $keep)) as $old) @unlink($old);
+    }
+
+    /**
+     * Backup without cron: called after a login; writes data/backups/auto-<date>.pod when the newest one is older than
+     * `auto_backup_days` (default 7, 0 = off) and keeps `auto_backup_keep` (default 8). Never throws.
+     */
+    public static function auto(array $cfg, Pod $pod): void
+    {
+        try {
+            $days = (int)($cfg['auto_backup_days'] ?? 7);
+            if ($days <= 0) return;
+            $dir = rtrim($cfg['data_dir'], '/') . '/backups';
+            $newest = 0;
+            foreach (glob("$dir/auto-*.pod") ?: [] as $f) $newest = max($newest, (int)filemtime($f));
+            if (time() - $newest < $days * 86400) return;
+            if (!is_dir($dir) && !mkdir($dir, 0750, true)) return;
+            self::make($cfg, $pod, false, "$dir/auto-" . gmdate('Y-m-d_His') . '.pod');
+            self::rotate("$dir/auto-*.pod", (int)($cfg['auto_backup_keep'] ?? 8));
+        } catch (Throwable $e) { error_log('[lander] auto backup: ' . $e->getMessage()); }
+    }
+
     private static function fail(string $msg): array { return ['ok' => false, 'error' => $msg]; }
 }
