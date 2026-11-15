@@ -1,0 +1,8 @@
+# not part of the release ZIP (git archive)
+.claude export-ignore
+.gitattributes export-ignore
+CLAUDE.md export-ignore
+stage.md export-ignore
+docker-compose.yml export-ignore
+assets export-ignore
+og-card.png export-ignore
