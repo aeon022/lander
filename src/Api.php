@@ -13,6 +13,7 @@ require_once __DIR__ . '/Image.php';
  */
 final class Api
 {
+    public const VERSION = '0.3.0';
     private Pod $pod;
     private ?array $user = null;
     private const STATUSES = ['draft', 'in_review', 'published', 'scheduled'];
@@ -80,6 +81,7 @@ final class Api
             $r === 'media' => $this->media($m, array_slice($seg, 1)),
             $r === 'import' && ($seg[1] ?? '') === 'markdown' && $m === 'POST' => $this->importMarkdown(),
             $r === 'forms' => $this->forms($m, array_slice($seg, 1)),
+            $r === 'update' && $m === 'GET' => $this->updateCheck(),
             $r === 'backup' && $m === 'GET' => $this->backup(),
             $r === 'restore' && $m === 'POST' => $this->restore(),
             $r === 'users' => $this->users($m, array_slice($seg, 1)),
@@ -191,7 +193,7 @@ final class Api
             'siteName' => $this->pod->getMeta('site.name'),
             'podSize' => @filesize($this->cfg['pod']) ?: 0,
             'formatVersion' => $this->pod->getMeta('format_version') ?? '1',
-            'adminVersion' => 'Lander 0.3.0 · UI from Orbiter 0.3.96',
+            'adminVersion' => 'Lander ' . self::VERSION . ' · UI from Orbiter 0.3.96',
             'collections' => $cols,
             'nav' => ['hidden' => array_values(array_filter(array_map('trim', explode(',', $hidden)))), 'groups' => json_decode($this->pod->getMeta('nav.groups') ?? 'null', true)],
         ]);
@@ -417,6 +419,40 @@ final class Api
         $this->pod->run('INSERT INTO _media (id, filename, mime_type, size, data, alt, folder, url, path) VALUES (?,?,?,?,NULL,?,?,?,?)',
             [$id, $name, $type, filesize($path), $_POST['alt'] ?? null, $folder, $url, $path]);
         $this->json($this->pod->one('SELECT id, filename, mime_type, size, alt, folder, url, focal_x, focal_y, created_at FROM _media WHERE id = ?', [$id]), 201);
+    }
+
+    // ───────────────────────── update check (admin) ─────────────────────────
+    /** GET /api/update[?refresh=1]: is a newer Lander release on GitHub? Cached 12 h; off with 'update_check' => false. Only reads, never changes files. */
+    private function updateCheck(): void
+    {
+        if (!$this->isAdmin()) { $this->json(['error' => 'Admins only'], 403); return; }
+        $out = ['current' => self::VERSION, 'latest' => null, 'available' => false, 'url' => null, 'notes' => null, 'checkedAt' => null, 'enabled' => ($this->cfg['update_check'] ?? true) !== false];
+        if (!$out['enabled']) { $this->json($out); return; }
+        $cache = rtrim($this->cfg['data_dir'], '/') . '/update-check.json';
+        $c = is_file($cache) ? json_decode((string)@file_get_contents($cache), true) : null;
+        if (!is_array($c) || (time() - (int)($c['at'] ?? 0)) > 43200 || isset($_GET['refresh'])) {
+            $c = ['at' => time(), 'tag' => null, 'url' => null, 'notes' => null, 'error' => null];
+            $url = 'https://api.github.com/repos/aeon022/lander/releases/latest';
+            $hdr = "User-Agent: Lander/" . self::VERSION . "\r\nAccept: application/vnd.github+json\r\n";
+            $body = null;
+            if (function_exists('curl_init')) {
+                $ch = curl_init($url);
+                curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 6, CURLOPT_CONNECTTIMEOUT => 4, CURLOPT_HTTPHEADER => explode("\r\n", trim($hdr)), CURLOPT_SSL_VERIFYPEER => true]);
+                $r = curl_exec($ch); if ($r !== false && curl_getinfo($ch, CURLINFO_HTTP_CODE) === 200) $body = $r; curl_close($ch);
+            } elseif (ini_get('allow_url_fopen')) {
+                $r = @file_get_contents($url, false, stream_context_create(['http' => ['timeout' => 6, 'header' => $hdr]]));
+                if ($r !== false) $body = $r;
+            }
+            $j = $body ? json_decode($body, true) : null;
+            if (is_array($j) && isset($j['tag_name'])) { $c['tag'] = (string)$j['tag_name']; $c['url'] = (string)($j['html_url'] ?? ''); $c['notes'] = mb_substr((string)($j['body'] ?? ''), 0, 800); }
+            else $c['error'] = 'GitHub is not reachable from this server';
+            @file_put_contents($cache, json_encode($c));
+        }
+        $latest = isset($c['tag']) ? ltrim((string)$c['tag'], 'vV') : null;
+        $out['latest'] = $latest; $out['url'] = $c['url'] ?? null; $out['notes'] = $c['notes'] ?? null; $out['checkedAt'] = gmdate('c', (int)($c['at'] ?? time()));
+        $out['available'] = $latest !== null && preg_match('/^\d+(\.\d+){1,3}$/', $latest) === 1 && version_compare($latest, self::VERSION, '>');
+        if (!empty($c['error'])) $out['error'] = $c['error'];
+        $this->json($out);
     }
 
     // ───────────────────────── users (admin) ─────────────────────────

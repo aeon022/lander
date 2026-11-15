@@ -11,6 +11,7 @@ return [
     'auto_backup_days' => 7,                             // automatic backup after an admin login; 0 = off
     'auto_backup_keep' => 8,
     'public_cache_seconds' => 10,                        // cache time of /api/public/... answers; edits go live after at most this long (0 = no cache)
+    'update_check' => true,                              // ask GitHub (at most every 12 h) whether a newer release exists; false = never connect
     // Form intake (POST /api/form/{id}, server-to-server only, header X-Lander-Token). Empty = off.
     // Generate: php -r 'echo bin2hex(random_bytes(24)), "\n";'
     'form_token'     => '',

@@ -192,6 +192,21 @@
         </div>
       </div>
 
+      <!-- Lander: hint when a newer release exists (admins only) -->
+      <div id="update-hint" class="glass-card" style="display:none;padding:12px 18px;font-size:13px;line-height:1.5;border-color:var(--amber, #f59e0b)">
+        <span id="update-hint-text"></span> <a id="update-hint-link" href="#" target="_blank" rel="noopener" style="color:var(--accent)">Release notes →</a>
+      </div>
+      <script>
+        (function () {
+          fetch('/api/update', { credentials: 'include' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (u) {
+            if (!u || !u.available) return;
+            document.getElementById('update-hint-text').textContent = 'Lander ' + u.latest + ' is available (you have ' + u.current + ').';
+            if (u.url) document.getElementById('update-hint-link').href = u.url;
+            document.getElementById('update-hint').style.display = '';
+          }).catch(function () {});
+        })();
+      </script>
+
       <!-- Stats row -->
       <div class="stats-row glass-card">
         <div class="stat-cell">

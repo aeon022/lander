@@ -1013,6 +1013,7 @@
           </div>
         </div>
         <div id="backup-box" style="padding:12px 20px;border-top:1px solid var(--line)">
+          <div id="update-line" style="font-size:12px;line-height:1.6;margin-bottom:12px;color:var(--muted)"></div>
           <div class="pod-stat-label" style="margin-bottom:8px">Backup &amp; restore</div>
           <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">The SQL file (<code>.pod</code>) holds all content, users and settings; media are separate files. Keep backups private: they contain password hashes.</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -1046,6 +1047,23 @@
       if (!btn || !inp) return;
       const say = (t, ok) => { msg.style.display = ''; msg.style.color = ok ? 'var(--green, #4ade80)' : 'var(--red, #f87171)'; msg.textContent = t; };
       btn.addEventListener('click', () => inp.click());
+      // Lander version and whether a newer release exists (read-only; the server asks GitHub at most every 12 h)
+      (function () {
+        const el = document.getElementById('update-line'); if (!el) return;
+        const e = (t) => String(t ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+        const show = (u) => {
+          if (!u || !u.current) return;
+          let t = 'Lander <b>' + e(u.current) + '</b>';
+          if (!u.enabled) t += ' · update check is off';
+          else if (u.available) t += ' · <b style="color:var(--gold, #e0a030)">version ' + e(u.latest) + ' is available</b> — <a href="' + e(u.url) + '" target="_blank" rel="noopener" style="color:var(--accent)">download &amp; release notes</a> (replace the files; keep <code>data/</code>, <code>public/media/</code> and <code>lander.config.php</code>)';
+          else if (u.latest) t += ' · up to date';
+          else t += ' · could not check for updates';
+          el.innerHTML = t + ' · <a href="#" id="update-refresh" style="color:var(--accent)">check now</a>';
+          document.getElementById('update-refresh').addEventListener('click', (ev) => { ev.preventDefault(); load(true); });
+        };
+        const load = (refresh) => fetch('/api/update' + (refresh ? '?refresh=1' : ''), { credentials: 'include' }).then((r) => r.json()).then(show).catch(() => {});
+        load(false);
+      })();
       inp.addEventListener('change', async () => {
         const f = inp.files[0]; inp.value = '';
         if (!f) return;
