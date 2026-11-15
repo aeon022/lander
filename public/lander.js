@@ -1,5 +1,5 @@
-/* Lander: blendet Bereiche aus, die per Text erkannt werden müssen (Einstellungen, KI-Übersetzen).
-   Wird von sidebar.js auf jeder Seite geladen; reagiert auch auf nachträglich gerenderte Inhalte. */
+/* Lander: hides parts of the UI that Lander does not offer (settings cards, AI translate) by matching their text.
+   Loaded by sidebar.js on every page; also reacts to content rendered later. */
 (function () {
   'use strict';
   var GROUPS = ['AI Assistant', 'GitHub', 'Public API', 'Preview URLs', 'Media', 'Email notifications', 'Templates', 'FTP / FTPS Deploy', 'GitHub Sync'];

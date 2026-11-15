@@ -160,7 +160,7 @@ final class Api
         $this->json(['ok' => true, 'username' => $new]);
     }
 
-    /** Eigene Sitzungen anzeigen und andere Geräte abmelden (wie Orbiter: id = Hash des Tokens, nie das Token selbst). */
+    /** List own sessions and sign out other devices (as in Orbiter: id = hash of the token, never the token itself). */
     private function sessions(string $m, ?string $id): void
     {
         $cur = $_COOKIE['orb_sess'] ?? '';
@@ -191,7 +191,7 @@ final class Api
             'siteName' => $this->pod->getMeta('site.name'),
             'podSize' => @filesize($this->cfg['pod']) ?: 0,
             'formatVersion' => $this->pod->getMeta('format_version') ?? '1',
-            'adminVersion' => 'Lander 0.2.0 · Oberfläche Orbiter 0.3.95',
+            'adminVersion' => 'Lander 0.2.0 · UI from Orbiter 0.3.95',
             'collections' => $cols,
             'nav' => ['hidden' => array_values(array_filter(array_map('trim', explode(',', $hidden)))), 'groups' => json_decode($this->pod->getMeta('nav.groups') ?? 'null', true)],
         ]);
@@ -498,9 +498,9 @@ final class Api
     private const FORM_STATUSES = ['new', 'read', 'done', 'spam', 'confirmed', 'rejected'];
 
     /**
-     * POST /api/form/{formId}: Formular-Einsendung speichern. Nicht öffentlich wie bei Orbiter, sondern nur
-     * Server-zu-Server (z. B. anfrage.php der Website) mit Schlüssel `form_token` im Header X-Lander-Token.
-     * Ohne gesetzten Schlüssel ist die Annahme aus.
+     * POST /api/form/{formId}: store a form submission. Not public as in Orbiter, but server-to-server only
+     * (e.g. the website's own form handler) with the key `form_token` in the X-Lander-Token header.
+     * Without a key set, intake is off.
      */
     private function formSubmit(string $formId): void
     {
@@ -520,7 +520,7 @@ final class Api
         $this->json(['ok' => true, 'id' => $id]);
     }
 
-    /** Posteingang für angemeldete Nutzer: GET /api/forms, GET /api/forms/{formId}, PUT /api/forms/{id}/status, DELETE /api/forms/{id}. */
+    /** Inbox for signed-in users: GET /api/forms, GET /api/forms/{formId}, PUT /api/forms/{id}/status, DELETE /api/forms/{id}. */
     private function forms(string $m, array $seg): void
     {
         $n = count($seg);
@@ -595,7 +595,7 @@ final class Api
         $locale = isset($_GET['locale']) ? (string)$_GET['locale'] : null;
         $now = Pod::now();
         $live = fn(array $e) => ($e['publish_at'] === null || $e['publish_at'] <= $now) && ($e['unpublish_at'] === null || $e['unpublish_at'] > $now);
-        // Bild-, Datei- und Medienfelder (gespeichert als Medien-ID) für Websites auflösen: {id, url, alt, type}
+        // Resolve image, file and media fields (stored as media id) for websites: {id, url, alt, type}
         $schema = json_decode($c['schema'] ?: '{}', true) ?: [];
         $mediaKeys = array_keys(array_filter($schema, fn($f) => in_array($f['type'] ?? '', ['image', 'file', 'media'], true)));
         $base = (($_SERVER['HTTPS'] ?? '') === 'on' ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? '');
@@ -616,7 +616,7 @@ final class Api
             ($e && ($e['status'] === 'published' || ($e['status'] === 'scheduled' && $e['publish_at'] !== null)) && $live($e)) ? $this->json($out($e)) : $this->json(['error' => 'Not found'], 404);
             return;
         }
-        // «Geplant» wird live, sobald publish_at erreicht ist (kein Hintergrundprozess nötig)
+        // "Scheduled" goes live as soon as publish_at has passed (no background process needed)
         $list = array_values(array_filter(array_merge($pod->entries($col, 'published', $locale), array_filter($pod->entries($col, 'scheduled', $locale), fn($e) => $e['publish_at'] !== null)), $live));
         $this->json($c['singleton'] ? ($list ? $out($list[0]) : new stdClass()) : array_map($out, $list));
     }
@@ -660,7 +660,7 @@ final class Api
         $r['count']++; file_put_contents($f, json_encode($r), LOCK_EX);
     }
 
-    /** Leere Inhaltsfelder als {} ausgeben, nicht als [] (PHP kennt keinen Unterschied, die Oberfläche schon). */
+    /** Output empty content fields as {}, not [] (PHP does not tell them apart, the UI does). */
     private static function objects(mixed $v): mixed
     {
         if (!is_array($v)) return $v;

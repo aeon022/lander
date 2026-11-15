@@ -1,33 +1,33 @@
 #!/usr/bin/env php
 <?php
 declare(strict_types=1);
-// Lander CLI:  bin/lander user <name> [admin|editor]   ·   bin/lander passwd <name>   ·   bin/lander collection <id> <label> [singleton]
-//              bin/lander rebase [/unterordner]   ·   bin/lander backup [--media] [--keep=N]
-//              bin/lander import-md <collection> <ordner> [--overwrite]   ·   bin/lander import-media <ordner> <medienordner>
+// Lander CLI:  bin/lander user <name> [admin|editor]  ·  passwd <name>  ·  collection <id> <label> [singleton]
+//              import-md <collection> <folder> [--overwrite]  ·  import-media <folder> <media-folder>
+//              rebase [/subfolder]  ·  backup [--media] [--keep=N]
 require dirname(__DIR__) . '/src/Api.php';
 $cfg = require dirname(__DIR__) . '/lander.config.php';
 $pod = new Pod($cfg['pod']);
 [$cmd, $a, $b, $c] = array_pad(array_slice($argv, 1), 4, null);
 $ask = function (string $q): string { fwrite(STDOUT, $q); system('stty -echo 2>/dev/null'); $v = trim((string)fgets(STDIN)); system('stty echo 2>/dev/null'); fwrite(STDOUT, "\n"); return $v; };
-$pw = fn(string $n) => getenv('LANDER_PASSWORD') ?: $ask("Passwort für $n: ");
+$pw = fn(string $n) => getenv('LANDER_PASSWORD') ?: $ask("Password for $n: ");
 
 switch ($cmd) {
     case 'user':
-        if (!$a) exit("Name fehlt\n");
-        $p = $pw($a); if (strlen($p) < 10) exit("Mindestens 10 Zeichen\n");
+        if (!$a) exit("Name missing\n");
+        $p = $pw($a); if (strlen($p) < 10) exit("At least 10 characters\n");
         $pod->run('INSERT INTO _users (id, username, password, role) VALUES (?,?,?,?)', [Pod::uuid(), $a, password_hash($p, PASSWORD_DEFAULT), $b === 'editor' ? 'editor' : 'admin']);
-        echo "Benutzer $a angelegt\n"; break;
+        echo "User $a created\n"; break;
     case 'passwd':
-        $p = $pw((string)$a); if (strlen($p) < 10) exit("Mindestens 10 Zeichen\n");
-        echo $pod->run('UPDATE _users SET password = ? WHERE username = ?', [password_hash($p, PASSWORD_DEFAULT), $a]) ? "Passwort gesetzt\n" : "Unbekannt\n";
+        $p = $pw((string)$a); if (strlen($p) < 10) exit("At least 10 characters\n");
+        echo $pod->run('UPDATE _users SET password = ? WHERE username = ?', [password_hash($p, PASSWORD_DEFAULT), $a]) ? "Password set\n" : "Unknown user\n";
         $pod->run('DELETE FROM _sessions WHERE user_id IN (SELECT id FROM _users WHERE username = ?)', [$a]); break;
     case 'collection':
         if (!$a || !$b) exit("bin/lander collection <id> <label> [singleton]\n");
         $pod->run('INSERT OR IGNORE INTO _collections (id, label, schema, singleton) VALUES (?,?,?,?)', [$a, $b, '{}', $c === 'singleton' ? 1 : 0]);
-        echo "Sammlung $a bereit\n"; break;
+        echo "Collection $a ready\n"; break;
     case 'import-md':
         if (!$a || !$b || !is_dir($b)) exit("bin/lander import-md <collection> <ordner> [--overwrite]\n");
-        if (!$pod->collection($a)) exit("Sammlung $a gibt es nicht\n");
+        if (!$pod->collection($a)) exit("Collection $a does not exist\n");
         $n = 0;
         foreach (glob(rtrim($b, '/') . '/*.{md,markdown}', GLOB_BRACE) as $f) {
             [$data, $body] = Api::frontmatter((string)file_get_contents($f));
@@ -37,9 +37,9 @@ switch ($cmd) {
             else $pod->createEntry($a, $slug, $data, $status);
             $n++;
         }
-        echo "$n Einträge importiert\n"; break;
+        echo "$n entries imported\n"; break;
     case 'import-media':
-        // Dateien aus <ordner> in die Mediathek kopieren (gleiche Regeln wie der Upload im Admin)
+        // copy files from <folder> into the media library (same rules as an upload in the admin)
         if (!$a || !is_dir($a)) exit("bin/lander import-media <ordner> <medienordner>\n");
         $types = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif', 'image/avif' => 'avif', 'application/pdf' => 'pdf'];
         $folder = implode('/', array_filter(explode('/', preg_replace('/[^a-z0-9_\/-]/', '', strtolower((string)$b))), fn($x) => $x !== '' && $x !== '..'));
@@ -48,7 +48,7 @@ switch ($cmd) {
         $fi = new finfo(FILEINFO_MIME_TYPE); $n = 0;
         foreach (glob(rtrim($a, '/') . '/*') as $f) {
             $type = $fi->file($f) ?: '';
-            if (!isset($types[$type])) { echo "übersprungen (Typ $type): " . basename($f) . "\n"; continue; }
+            if (!isset($types[$type])) { echo "skipped (type $type): " . basename($f) . "\n"; continue; }
             $id = Pod::uuid();
             $base = trim(preg_replace('/[^a-z0-9]+/', '-', strtolower(pathinfo($f, PATHINFO_FILENAME))), '-') ?: 'datei';
             $name = substr($id, 0, 8) . '-' . substr($base, 0, 60) . '.' . $types[$type];
@@ -57,14 +57,14 @@ switch ($cmd) {
             $pod->run('INSERT INTO _media (id, filename, mime_type, size, data, alt, folder, url, path) VALUES (?,?,?,?,NULL,NULL,?,?,?)', [$id, $name, $type, filesize("$dir/$name"), $folder, $url, "$dir/$name"]);
             $n++;
         }
-        echo "{$n} Dateien in «{$folder}» importiert\n"; break;
+        echo "{$n} files imported into «{$folder}»\n"; break;
     case 'rebase':
-        // UI-Pfade für einen Unterordner anpassen (z. B. /lander); ohne Angabe: base_path aus der Konfiguration
+        // adapt the admin paths to a subfolder (e.g. /lander); without an argument: base_path from the config
         $target = $a ?? ($cfg['base_path'] ?? '');
         $r = Rebase::run(dirname(__DIR__) . '/public', (string)$target);
-        echo "Basis «" . (Rebase::normalize((string)$target) ?: '/') . "»: {$r['changed']} von {$r['files']} Dateien angepasst\n";
-        if ($r['left']) echo "Hinweis, nicht angepasst: " . implode(', ', $r['left']) . "\n";
-        echo "Denk daran: lander.config.php → 'base_path' und 'media_url' passend setzen.\n"; break;
+        echo "Base «" . (Rebase::normalize((string)$target) ?: '/') . "»: {$r['changed']} of {$r['files']} files adapted\n";
+        if ($r['left']) echo "Not adapted: " . implode(', ', $r['left']) . "\n";
+        echo "Remember to set 'base_path' and 'media_url' in lander.config.php.\n"; break;
     case 'backup':
         $withMedia = in_array('--media', [$a, $b, $c], true);
         $keep = 8; foreach ([$a, $b, $c] as $x) if (is_string($x) && preg_match('/^--keep=(\d+)$/', $x, $m)) $keep = (int)$m[1];
@@ -73,5 +73,5 @@ switch ($cmd) {
         Backup::make($cfg, $pod, $withMedia, $dest); Backup::rotate("$dir/cli-*.$ext", $keep);
         echo "Backup: $dest (" . round(filesize($dest) / 1048576, 1) . " MB)\n"; break;
     default:
-        echo "Befehle: user, passwd, collection, import-md, import-media, rebase, backup\n";
+        echo "Commands: user, passwd, collection, import-md, import-media, rebase, backup\n";
 }

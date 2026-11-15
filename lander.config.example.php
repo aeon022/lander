@@ -1,15 +1,18 @@
 <?php
-// Kopieren nach lander.config.php und anpassen. Liegt außerhalb von public/.
+// Copy to lander.config.php and adjust (install.php writes it for you). Keep it outside public/.
 return [
-    'pod'            => __DIR__ . '/data/content.pod',   // SQLite, Orbiter-Format
-    'data_dir'       => __DIR__ . '/data',               // Rate-Limit-Dateien
-    'media_dir'      => __DIR__ . '/public/media',       // Uploads als Dateien
-    'media_url'      => '/media',                        // öffentlicher Pfad (oder volle URL)
+    'pod'            => __DIR__ . '/data/content.pod',   // the SQL file (SQLite, Orbiter format)
+    'data_dir'       => __DIR__ . '/data',               // rate-limit files, backups, image cache
+    'media_dir'      => __DIR__ . '/public/media',       // uploads as files
+    'media_url'      => '/media',                        // public path (or full URL); in a subfolder e.g. /lander/media
+    'base_path'      => '',                              // '' for a domain root, '/lander' for a subfolder (then run: php bin/lander rebase /lander)
     'max_upload_mb'  => 12,
-    'max_restore_mb' => 100,                         // Backup-Wiederherstellung (zusätzlich gelten PHP upload_max_filesize / post_max_size)
-    // Formular-Annahme (POST /api/form/{id}, nur Server-zu-Server, Header X-Lander-Token). Leer = aus.
-    // Erzeugen: php -r 'echo bin2hex(random_bytes(24)), "\n";'  — derselbe Wert steht in anfrage.config.php der Website.
+    'max_restore_mb' => 100,                             // restoring a backup (PHP upload_max_filesize / post_max_size apply as well)
+    'auto_backup_days' => 7,                             // automatic backup after an admin login; 0 = off
+    'auto_backup_keep' => 8,
+    // Form intake (POST /api/form/{id}, server-to-server only, header X-Lander-Token). Empty = off.
+    // Generate: php -r 'echo bin2hex(random_bytes(24)), "\n";'
     'form_token'     => '',
-    // Websites, die /api/public/... im Browser lesen dürfen (CORS)
-    'public_origins' => ['https://psychiaterin-graz.at', 'http://127.0.0.1:4321', 'http://localhost:4321'],
+    // Sites that may read /api/public/... from the browser (CORS)
+    'public_origins' => ['https://example.at', 'http://127.0.0.1:4321', 'http://localhost:4321'],
 ];

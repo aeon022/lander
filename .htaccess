@@ -1,6 +1,6 @@
-# Lander im Unterordner (z. B. example.at/lander/): nur public/ ist von außen erreichbar.
-# src/, data/ (die .pod!), bin/ und lander.config.php sind so nie abrufbar.
-# Läuft Lander dagegen auf einer Subdomain mit Document Root = public/, wird diese Datei nicht gebraucht.
+# Lander in a subfolder (e.g. example.at/lander/): only public/ is reachable from the web.
+# src/, data/ (the SQL file!), bin/ and lander.config.php can never be requested this way.
+# On a subdomain whose document root is public/, this file is not needed.
 Options -Indexes
 RewriteEngine On
 RewriteCond $1 !^public(/|$)

@@ -1,4 +1,4 @@
-# Lokale Testumgebung: PHP 8.3 + Apache, wie auf einem gewöhnlichen Webhost.
+# Local test environment: PHP 8.3 + Apache, like an ordinary web host.
 services:
   lander:
     image: php:8.3-apache

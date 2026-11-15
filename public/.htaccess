@@ -1,4 +1,4 @@
-# Lander: Admin-Oberfläche statisch, /api/* an index.php
+# Lander: static admin UI, /api/* goes to index.php
 Options -Indexes
 DirectoryIndex index.php
 RewriteEngine On
@@ -14,7 +14,7 @@ RewriteRule ^([a-z-]+)$ $1.html [L]
   Require all denied
 </FilesMatch>
 <IfModule mod_headers.c>
-  # Oberfläche immer frisch prüfen (ETag), sonst passen nach Updates alte und neue Skripte nicht zusammen
+  # Always revalidate the UI (ETag), otherwise old and new scripts mix after an update
   <FilesMatch "\.(html|js|css)$">
     Header always set Cache-Control "no-cache"
   </FilesMatch>
