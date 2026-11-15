@@ -659,7 +659,8 @@ final class Api
             foreach ($mediaKeys as $k) if (array_key_exists($k, $d)) $d[$k] = $resolve($d[$k]);
             return ['slug' => $e['slug'], 'locale' => $e['locale'], 'data' => $d ?: new stdClass(), 'updated_at' => $e['updated_at'], 'publish_at' => $e['publish_at']];
         };
-        header('Cache-Control: public, max-age=60, stale-while-revalidate=300');
+        $ttl = max(0, (int)($this->cfg['public_cache_seconds'] ?? 10));   // how long browsers/proxies may reuse an answer; edits show up after at most this long
+        header($ttl > 0 ? "Cache-Control: public, max-age=$ttl, stale-while-revalidate=" . ($ttl * 3) : 'Cache-Control: no-cache');
         if ($slug !== null && $slug !== '') {
             $e = $pod->entry($col, $slug, $locale ?? '');
             ($e && ($e['status'] === 'published' || ($e['status'] === 'scheduled' && $e['publish_at'] !== null)) && $live($e)) ? $this->json($out($e)) : $this->json(['error' => 'Not found'], 404);

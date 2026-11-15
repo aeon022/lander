@@ -26,7 +26,7 @@ The content lives in one SQL file (`content.pod`, a plain SQLite database, only 
 ## Features
 
 - **The real Orbiter admin:** Station mode, themes, dock, editor and media library, served as static files and backed by a PHP API with the same paths and JSON shapes.
-- **Live read API:** `/api/public/<collection>[/<slug>]` with CORS for your sites and a 60 s cache. Image, file and media fields are resolved to `{ id, url, alt, type }`.
+- **Live read API:** `/api/public/<collection>[/<slug>]` with CORS for your sites and a short cache (10 s by default). Image, file and media fields are resolved to `{ id, url, alt, type }`.
 - **Image variants:** `/api/public/media/<id>?w=800&ar=16:9&fmt=webp`, resized, cropped around the focal point and re-encoded (GD), cached on disk. Sizes, ratios and formats snap to fixed sets, so the cache stays bounded.
 - **Markdown import:** `.md` with frontmatter through Admin → Import or `bin/lander import-md`.
 - **Media as files:** uploads go to `public/media/` (JPG, PNG, WebP, GIF, AVIF, PDF; real file type checked, PHP execution blocked there).
@@ -101,6 +101,7 @@ Add your site's origin to `public_origins` in the config so browsers may read th
 | `base_path` | `''` for a domain root, `'/lander'` for a subfolder |
 | `max_upload_mb`, `max_restore_mb` | upload and restore limits |
 | `auto_backup_days`, `auto_backup_keep` | automatic backups (`0` days = off) |
+| `public_cache_seconds` | how long browsers and proxies may reuse `/api/public/...` answers (default 10; `0` = no cache): edits go live after at most this long |
 | `form_token` | accepts form submissions (`POST /api/form/{id}`, header `X-Lander-Token`) |
 | `public_origins` | sites that may read `/api/public/...` from the browser (CORS) |
 

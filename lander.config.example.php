@@ -10,6 +10,7 @@ return [
     'max_restore_mb' => 100,                             // restoring a backup (PHP upload_max_filesize / post_max_size apply as well)
     'auto_backup_days' => 7,                             // automatic backup after an admin login; 0 = off
     'auto_backup_keep' => 8,
+    'public_cache_seconds' => 10,                        // cache time of /api/public/... answers; edits go live after at most this long (0 = no cache)
     // Form intake (POST /api/form/{id}, server-to-server only, header X-Lander-Token). Empty = off.
     // Generate: php -r 'echo bin2hex(random_bytes(24)), "\n";'
     'form_token'     => '',
