@@ -21,3 +21,7 @@
 2. psychiaterin-graz.at anbinden: Hinweis + Lehrgangstermine live aus `/api/public/…`.
 3. Benutzerverwaltung im Admin, 2FA (TOTP), optional Bildverkleinerung (GD).
 4. Deployment-Anleitung ipax (Subdomain `redaktion.`).
+
+## 2026-11-15 — Settings-Layout aus Orbiter (ba10dbd3)
+- `public/settings.html`: Sektionen (You/General/Content/Publishing/System), ausgeglichene Spalten, einklappbare Karten, Sprungleiste. Patch 1:1 aus Orbiter übernommen.
+- Getestet im Docker-Scratch (PHP 8.3/Apache, Port 8097; 8088 belegt durch den echten lander-Container): 15 Karten, keine Konsolenfehler, kein Überlauf (xfce/glass/classic 1440, xfce 390). Speichern nicht separat getestet (Logik unverändert).
