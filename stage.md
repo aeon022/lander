@@ -11,6 +11,11 @@
 
 - 13.11.: Branding: Zeichen (Planet mit Landebeinen), Favicon, Login mit Aufsetz-Animation und Seitenname (`/api/brand`, öffentlich nur der Name), Statusleiste «ORBITER › LANDER», Titel «Lander — …», Touchdown-Amber als Akzent der Space-Palette (`html[data-lander]`), Version «Lander 0.1.0 · Oberfläche Orbiter 0.3.90». Seitenname in den Einstellungen gesetzt.
 
+## Stand (2026-11-14, Nachzug aus Orbiter 0.3.91+, uncommittet)
+- Oberfläche per 3-Wege-Merge (Orbiter damals → Lander → Orbiter heute) aktualisiert: 10 Themes (Space, missionctl, Zen, Catppuccin, Terminal, Paper, Nord, Gruvbox, Dracula, Tokyo Night), Schrift-Auswahl (IBM Plex), eigene Farben, Responsive für Classic/Glass (untere Tab-Leiste ohne Calendar-Tab, `data-lander`), Station-Mobile-Fix. Landers Blöcke («Lander: …», Touchdown-Amber, Branding, Ausblenden) unverändert erhalten.
+- Sicherheit (aus Orbiter-Audit): `window.orbEsc` + Escapes in dashboard/collections/editor/entries/settings; `PUT /api/meta`: `site.url`, `workflow.review`, `format_version`, `preview_url.*` nur Admin, `preview_url` nur `http(s)://` oder `/…` (`metaWritable` in `Api.php`); Request-Größenlimit (`max_upload_mb`+1 MB → 413); `display_errors` aus. Username/Slug waren schon sicher (Regex bzw. `slugify`).
+- Getestet: Docker (php:8.3-cli, Scratch-Kopie, leerer Pod) per curl (Editor-Rechte, Preview-URL, 413, Slug, Username) und Headless-Chrome-Screenshots (Station Handy, Glass Handy, Einstellungen Desktop). Nicht getestet: Apache/.htaccess-Pfad, echter Pod mit Pinas Daten, Klick-Tests.
+
 ## Als Nächstes
 1. KI-Knöpfe und leere Einstellungsbereiche ausblenden; Klick-Tests (Speichern, Upload über Oberfläche).
 2. psychiaterin-graz.at anbinden: Hinweis + Lehrgangstermine live aus `/api/public/…`.
