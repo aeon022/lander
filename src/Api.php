@@ -38,6 +38,7 @@ final class Api
             $this->pod = new Pod($this->cfg['pod']);
             if ($method === 'POST' && preg_match('#^/api/form/([a-z0-9_-]{1,64})$#', $path, $fm)) { $this->formSubmit($fm[1]); return; }
             if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true) && !$this->sameOrigin()) { $this->json(['error' => 'CSRF check failed'], 403); return; }
+            if (in_array($method, ['POST', 'PUT', 'PATCH'], true) && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > ((int)($this->cfg['max_upload_mb'] ?? 12) + 1) * 1048576) { $this->json(['error' => 'Payload too large'], 413); return; }
 
             if ($method === 'POST' && $path === '/api/auth/login') { $this->login(); return; }
             if ($method === 'GET' && $path === '/api/brand') { $this->json(['name' => $this->pod->getMeta('site.name'), 'product' => 'Lander']); return; }
@@ -193,12 +194,22 @@ final class Api
     private function metaAllowed(string $k): bool { return in_array($k, self::META_KEYS, true) || preg_match('/^(preview_url|templates)\.[a-z0-9_-]+$/', $k) === 1; }
     private function metaAll(): void { $o = []; foreach (self::META_KEYS as $k) $o[$k] = $this->pod->getMeta($k); $this->json($o); }
     private function metaGet(string $k): void { $k = str_replace('~', '.', $k); $this->metaAllowed($k) ? $this->json(['key' => $k, 'value' => $this->pod->getMeta($k)]) : $this->json(['error' => 'Key not allowed'], 403); }
-    private function metaPut(): void { foreach ($this->body() as $k => $v) if ($this->metaAllowed((string)$k)) $this->pod->setMeta((string)$k, $v === null ? '' : (string)$v); $this->json(['ok' => true]); }
+    private const META_ADMIN_ONLY = ['site.url', 'workflow.review', 'format_version'];
+    /** Non-admins must not change site-wide settings; preview URLs are admin-only and may only be http(s) or site-relative (they end up in an <a href>). */
+    private function metaWritable(string $k, mixed $v): bool
+    {
+        $preview = str_starts_with($k, 'preview_url.');
+        if (!$this->isAdmin() && ($preview || in_array($k, self::META_ADMIN_ONLY, true))) return false;
+        if ($preview && $v !== null && $v !== '' && !preg_match('#^(https?://|/(?!/))#i', trim((string)$v))) return false;
+        return true;
+    }
+    private function metaPut(): void { foreach ($this->body() as $k => $v) if ($this->metaAllowed((string)$k) && $this->metaWritable((string)$k, $v)) $this->pod->setMeta((string)$k, $v === null ? '' : (string)$v); $this->json(['ok' => true]); }
     private function metaPutOne(string $k): void
     {
         $k = str_replace('~', '.', $k);
         if (!$this->metaAllowed($k)) { $this->json(['error' => 'Key not allowed'], 403); return; }
         $v = $this->body()['value'] ?? '';
+        if (!$this->metaWritable($k, $v)) { $this->json(['error' => 'Forbidden or invalid value'], 403); return; }
         $this->pod->setMeta($k, is_string($v) ? $v : json_encode($v));
         $this->json(['ok' => true]);
     }
