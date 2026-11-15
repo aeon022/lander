@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lander — Users</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@200;300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css" />
+  <script src="/theme.js"></script>
+  <style>
+    .user-table { border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; margin-bottom:28px; }
+    .user-head { display:grid; grid-template-columns:1fr 90px 160px 1fr; padding:7px 16px; background:var(--bg2); border-bottom:1px solid var(--line); }
+    .user-head-cell { font-size:9px; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); }
+    .user-row { display:grid; grid-template-columns:1fr 90px 160px 1fr; align-items:center; padding:12px 16px; border-bottom:1px solid var(--line2); background:var(--bg1); }
+    .user-actions { display:flex; gap:6px; justify-content:flex-end; }
+    .btn-action { padding:3px 10px; background:transparent; border:1px solid var(--line); color:var(--muted); font-family:var(--mono); font-size:9px; cursor:pointer; transition:all .12s; border-radius:2px; }
+    .btn-action:hover { border-color:var(--accent); color:var(--accent); }
+    .user-row:last-child { border-bottom:none; }
+    .user-row.is-self { background:var(--accent-bg); }
+    .user-name { font-size:12px; color:var(--text); display:flex; align-items:center; gap:8px; }
+    .self-tag { font-size:9px; color:var(--accent); background:var(--accent-bg); border:1px solid rgba(90,122,240,.2); padding:1px 6px; border-radius:2px; }
+    .role-badge { font-size:9px; padding:2px 8px; letter-spacing:0.06em; border-radius:2px; }
+    .role-badge.admin  { color:var(--gold);  background:var(--gold-bg);  border:1px solid rgba(200,168,107,.2); }
+    .role-badge.reviewer { color:var(--accent2); background:var(--accent-bg); border:1px solid var(--line); }
+    .role-badge.editor { color:var(--muted); background:var(--bg3);      border:1px solid var(--line); }
+    .user-date { font-size:11px; color:var(--mid); }
+    .btn-del { padding:3px 10px; background:transparent; border:1px solid var(--line); color:var(--muted); font-family:var(--mono); font-size:9px; cursor:pointer; transition:all .12s; border-radius:2px; }
+    .btn-del:hover:not(:disabled) { border-color:var(--red); color:var(--red); background:rgba(139,38,53,.04); }
+    .btn-del:disabled { opacity:.3; cursor:default; }
+
+    .add-group { background:var(--bg2); border:1px solid var(--line); border-radius:var(--radius); }
+    .group-header { padding:10px 20px; border-bottom:1px solid var(--line); font-size:9px; letter-spacing:0.28em; text-transform:uppercase; color:var(--muted); display:flex; align-items:center; gap:8px; }
+    .group-header::before { content:"—"; color:var(--gold); }
+    .add-row { display:grid; grid-template-columns:1fr 1fr 120px; gap:12px; padding:16px 20px; align-items:end; }
+    .add-field { display:flex; flex-direction:column; gap:5px; }
+    .add-label { font-size:9px; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); }
+    .banner { padding:8px 16px; font-size:10px; display:flex; align-items:center; gap:6px; border-radius:var(--radius); margin-bottom:14px; }
+    .banner-ok  { background:var(--jade-bg); color:var(--jade); border:1px solid rgba(45,139,106,.2); }
+    .banner-ok::before { content:"✓"; }
+    .banner-err { background:rgba(139,38,53,.07); color:var(--red); border:1px solid rgba(139,38,53,.15); }
+    .banner-err::before { content:"✕"; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <a class="logo" href="/dashboard.html"><div class="logo-mark">OR</div>Orbiter</a>
+      <div class="topbar-right">
+        <button class="search-trigger" id="search-btn" title="Search (⌘K)">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          Search <kbd>⌘K</kbd>
+        </button>
+        <button class="scheme-toggle" id="scheme-toggle" title="Toggle scheme">◐</button>
+        <span class="user" id="topbar-user"></span>
+        <span class="logout" id="logout-btn">Sign out</span>
+      </div>
+    </header>
+    <nav class="sidebar">
+      <div class="nav-section">Content</div>
+      <a class="nav-item" href="/dashboard.html"><span class="nav-icon">◈</span>Dashboard</a>
+      <a class="nav-item" href="/collections.html"><span class="nav-icon">⊞</span>Collections</a>
+      <div class="nav-section">Assets</div>
+      <a class="nav-item" href="/media.html"><span class="nav-icon">⊟</span>Media</a>
+      <div class="nav-section">Tools</div>
+      <a class="nav-item" href="/inbox.html"><span class="nav-icon">✉</span>Inbox</a>
+      <a class="nav-item" href="/snippets.html"><span class="nav-icon">⌗</span>Snippets</a>
+
+      <div class="nav-section">System</div>
+      <a class="nav-item" href="/schema.html"><span class="nav-icon">◈</span>Schema</a>
+      <a class="nav-item" href="/build.html"><span class="nav-icon">▲</span>Build</a>
+      <a class="nav-item" href="/settings.html"><span class="nav-icon">◎</span>Settings</a>
+      <a class="nav-item active admin-only" href="/users.html" style="display:none"><span class="nav-icon">◉</span>Users</a>
+      <div class="sidebar-footer">
+        <div class="pod-name" id="pod-name">content.pod</div>
+        <div class="pod-info" id="pod-info"></div>
+        <div class="pod-version" id="pod-version"></div>
+        <div class="pod-status"><span class="pod-dot"></span>pod synced</div>
+      </div>
+    </nav>
+    <main class="main">
+      <div class="page-header glass-card">
+        <h1 class="page-title">Users</h1>
+        <p class="page-sub" id="user-count"></p>
+      </div>
+      <div id="banner" class="banner" style="display:none"></div>
+      <div id="content"><div class="empty"><div class="spinner"></div></div></div>
+    
+  <script type="module">
+    const me = await fetch('/api/auth/me',{credentials:'include'}).then(r=>r.json()).catch(()=>null);
+    if (!me?.user) { location.replace('/login.html'); throw new Error('unauthenticated'); }
+    if (me.user.role !== 'admin') { location.replace('/dashboard.html'); }
+    document.getElementById('topbar-user').textContent = me.user.username;
+    document.querySelectorAll('.admin-only').forEach(el=>el.style.display='');
+    document.getElementById('logout-btn').addEventListener('click',async()=>{
+      await fetch('/api/auth/logout',{method:'POST',credentials:'include'});
+      location.replace('/login.html');
+    });
+
+    function showBanner(cls, text) {
+      const el = document.getElementById('banner');
+      el.className = 'banner ' + cls;
+      el.textContent = text;
+      el.style.display = '';
+      setTimeout(()=>el.style.display='none', 3000);
+    }
+
+    async function loadUsers() {
+      const users = await fetch('/api/users',{credentials:'include'}).then(r=>r.json()).catch(()=>[]);
+      document.getElementById('user-count').textContent = `${users.length} user${users.length!==1?'s':''}`;
+
+      const wrap = document.getElementById('content');
+      if (!users.length) {
+        wrap.innerHTML = '<div class="empty"><div class="empty-icon">◉</div>No users yet</div>';
+        return;
+      }
+      wrap.innerHTML = `
+        <div class="user-table">
+          <div class="user-head">
+            <div class="user-head-cell">Username</div>
+            <div class="user-head-cell">Role</div>
+            <div class="user-head-cell">Last login</div>
+            <div class="user-head-cell"></div>
+          </div>
+          ${users.map(u=>`
+            <div class="user-row ${u.id===me.user.id?'is-self':''}">
+              <div class="user-name">${orbEsc(u.username)}${u.id===me.user.id?'<span class="self-tag">you</span>':''}</div>
+              <div><span class="role-badge ${u.role}">${u.role}</span>${u.totp_enabled?' <span class="role-badge editor" title="Two-factor authentication is on">2FA</span>':''}</div>
+              <div class="user-date">${u.last_login ? new Date(u.last_login).toLocaleDateString() : '—'}</div>
+              <div class="user-actions">
+                <select class="btn-action role-select" data-id="${u.id}" ${u.id===me.user.id?'disabled':''}>
+                  ${['editor','admin']  /* Lander: no reviewer role */.map(r=>`<option value="${r}" ${u.role===r?'selected':''}>${r}</option>`).join('')}
+                </select>
+                ${u.totp_enabled&&u.id!==me.user.id?`<button class="btn-action btn-reset-2fa" data-id="${u.id}" data-name="${orbEsc(u.username)}" title="For a user who lost their device and recovery codes">Reset 2FA</button>`:''}
+                ${false /* Lander: no per-collection limits */ && u.role!=='admin'?`<button class="btn-action btn-perms" data-id="${u.id}" data-name="${orbEsc(u.username)}">Collections</button>`:''}
+                <button class="btn-action btn-reset-pw" data-id="${u.id}" data-name="${orbEsc(u.username)}" ${u.id===me.user.id?'disabled':''}>Reset PW</button>
+                <button class="btn-del" data-id="${u.id}" ${u.id===me.user.id?'disabled':''}>Delete</button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        ${addForm()}
+      `;
+      attachAddForm();
+      wrap.querySelectorAll('.btn-del').forEach(btn=>btn.addEventListener('click', async ()=>{
+        if (!confirm('Delete this user?')) return;
+        const res = await fetch(`/api/users/${btn.dataset.id}`,{method:'DELETE',credentials:'include'});
+        if (res.ok) { showBanner('banner-ok ✓ User deleted'); loadUsers(); }
+        else showBanner('banner-err', '✕ Could not delete user');
+      }));
+
+      wrap.querySelectorAll('.btn-reset-2fa').forEach(btn=>btn.addEventListener('click', async ()=>{
+        if (!confirm(`Turn off two-factor authentication for ${btn.dataset.name} and sign them out everywhere?`)) return;
+        const res = await fetch(`/api/users/${btn.dataset.id}/2fa`,{method:'DELETE',credentials:'include'});
+        if (res.ok) { showBanner('banner-ok', '✓ 2FA reset'); loadUsers(); }
+        else showBanner('banner-err', '✕ Could not reset 2FA');
+      }));
+      wrap.querySelectorAll('.role-select').forEach(sel=>sel.addEventListener('change', async ()=>{
+        const newRole = sel.value;
+        if (!confirm(`Change role to ${newRole}?`)) { loadUsers(); return; }
+        const res = await fetch(`/api/users/${sel.dataset.id}`,{method:'PUT',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:newRole})});
+        if (res.ok) { showBanner('banner-ok', `✓ Role changed to ${newRole}`); loadUsers(); }
+        else showBanner('banner-err', '✕ Could not change role');
+      }));
+
+      wrap.querySelectorAll('.btn-perms').forEach(btn=>btn.addEventListener('click', async ()=>{
+        const userId = btn.dataset.id;
+        const [permsRes, colsRes] = await Promise.all([
+          fetch(`/api/users/${userId}/permissions`, { credentials: 'include' }).then(r=>r.json()),
+          fetch('/api/collections', { credentials: 'include' }).then(r=>r.json()),
+        ]);
+        const cols = Array.isArray(colsRes) ? colsRes : [];
+        const current = permsRes.allowed; // null = unrestricted, array = restricted
+        const list = cols.map(c =>
+          `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line2);font-size:12px;cursor:pointer;">
+            <input type="checkbox" value="${c.id}" ${(!current||current.includes(c.id))?'checked':''} style="accent-color:var(--jade)">
+            ${c.label} <span style="color:var(--muted);font-size:10px">${c.id}</span>
+          </label>`
+        ).join('');
+        const modal = document.createElement('div');
+        modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
+        modal.innerHTML=`<div style="background:var(--bg1);border:1px solid var(--line);border-radius:var(--radius);padding:24px;min-width:320px;max-width:400px;max-height:80vh;overflow-y:auto;">
+          <div style="font-weight:600;margin-bottom:4px;">Collection access</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:16px;">for ${btn.dataset.name} — uncheck to restrict</div>
+          <div id="perms-list">${list}</div>
+          <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">
+            <button class="btn" id="perm-cancel">Cancel</button>
+            <button class="btn btn-primary" id="perm-save">Save</button>
+          </div>
+        </div>`;
+        document.body.appendChild(modal);
+        modal.querySelector('#perm-cancel').addEventListener('click', ()=>modal.remove());
+        modal.querySelector('#perm-save').addEventListener('click', async ()=>{
+          const checked = [...modal.querySelectorAll('#perms-list input:checked')].map(i=>i.value);
+          const allowed = checked.length === cols.length ? null : checked;
+          await fetch(`/api/users/${userId}/permissions`,{method:'PUT',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({allowed})});
+          modal.remove();
+          showBanner('banner-ok', '✓ Permissions updated');
+        });
+      }));
+
+      wrap.querySelectorAll('.btn-reset-pw').forEach(btn=>btn.addEventListener('click', async ()=>{
+        const pw = prompt(`New password for ${btn.dataset.name}:`)?.trim();
+        if (!pw) return;
+        if (pw.length < 10) { alert('Password must be at least 10 characters'); return; }
+        const res = await fetch(`/api/users/${btn.dataset.id}`,{method:'PUT',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+        if (res.ok) { showBanner('banner-ok', `✓ Password reset for ${btn.dataset.name}`); }
+        else showBanner('banner-err', '✕ Could not reset password');
+      }));
+    }
+
+    function addForm() {
+      return `
+        <div class="add-group">
+          <div class="group-header">Add user</div>
+          <form id="add-user-form">
+            <div class="add-row">
+              <div class="add-field">
+                <label class="add-label">Username</label>
+                <input class="input" type="text" name="username" autocomplete="off" required placeholder="username" />
+              </div>
+              <div class="add-field">
+                <label class="add-label">Password — min 10 chars</label>
+                <input class="input" type="password" name="password" autocomplete="new-password" required minlength="10" />
+              </div>
+              <div class="add-field">
+                <label class="add-label">Role</label>
+                <select class="input" name="role">
+                  <option value="editor">editor</option>
+                  <option value="admin">admin</option>
+                </select>
+              </div>
+            </div>
+            <div style="padding:0 20px 16px;display:flex;justify-content:flex-end;">
+              <button type="submit" class="btn btn-primary">+ Add user</button>
+            </div>
+          </form>
+        </div>
+      `;
+    }
+
+    function attachAddForm() {
+      document.getElementById('add-user-form').addEventListener('submit', async e=>{
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const res = await fetch('/api/users',{
+          method:'POST', credentials:'include',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ username: fd.get('username'), password: fd.get('password'), role: fd.get('role') }),
+        });
+        const json = await res.json();
+        if (res.ok) { showBanner('banner-ok','✓ User created'); e.target.reset(); loadUsers(); }
+        else showBanner('banner-err','✕ ' + (json.error ?? 'Failed'));
+      });
+    }
+
+    loadUsers();
+  </script>
+</main>
+  </div>
+  <script src="/search.js"></script>
+  <script src="/sidebar.js"></script>
+  <script src="/router.js"></script>
+</body>
+</html>

@@ -38,3 +38,8 @@
 - `src/Image.php`: `?w&ar&fmt` für `/api/media/:id/raw` und `/api/public/media/:id`, Stufen/Whitelists, Cache in `data/cache/media`.
 - Getestet (Docker PHP 8.3, Apache, Unterordner /lander/ und flach): Installer, Login/Navigation ohne 404 außerhalb /lander/, Cookie-Pfad, gesperrte Pfade (src, bin, config, .pod), Rebase 2× idempotent, Bildvarianten (webp/png/jpg, Snap, Cache), Auto- und CLI-Backup (.pod, .zip), flache Installation unverändert (Settings-Test).
 - Nicht getestet: echter Shared Host, Nginx, `AllowOverride None`-Hosts, PHP ohne gd (Fallback per Code), Restore im Unterordner, Windows-Pfade.
+
+## 2026-11-15 — Benutzerverwaltung
+- `Api::users()`: GET/POST `/api/users`, PUT/DELETE `/api/users/{id}` (nur Admin; Rollen admin/editor; Name 2–64 Zeichen, Passwort ≥ 10; eigene Rolle/eigenes Konto nicht änderbar bzw. löschbar; Passwortwechsel meldet die Sitzungen des Benutzers ab). `public/users.html` aus Orbiter, ohne Reviewer, Sammlungs-Rechte und 2FA.
+- Getestet (Docker): Anlegen/Validierung/Duplikat/Rolle ungültig→editor, Editor-Rechte (users/backup/restore 403, Inhalte ok), Passwort-Reset (alte Sitzung 401), Löschen, Seite im Browser (anlegen, Reset PW, löschen).
+- Hinweis: Öffentliche API cached 60 s + 300 s stale (nginx auf yard hält die Antwort); Änderungen erscheinen bis zu ~6 min später. Option `public_cache_seconds` offen.

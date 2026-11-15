@@ -33,6 +33,7 @@ The content lives in one SQL file (`content.pod`, a plain SQLite database, only 
 - **Installer:** open `install.php` once. It detects subfolder or domain root, writes the config, creates the first admin and deletes itself.
 - **Subfolder or subdomain:** `example.at/lander/` works as well as `redaktion.example.at`.
 - **Backup, restore, move:** automatic weekly backups, download as SQL file or ZIP with media, restore with validation, `bin/lander backup` for cron.
+- **Users:** admins add editors and admins in the admin (Users page): create, change role, reset password, delete.
 - **Inbox:** form submissions server-to-server with a token.
 - **Hardened:** CSRF origin check, login throttling, escaped output, validated uploads, admin-only meta writes, request size limits. Sessions are HttpOnly, SameSite=Strict cookies.
 
@@ -111,8 +112,8 @@ Add your site's origin to `public_origins` in the config so browsers may read th
 | Hosting | VPS, local, desktop app | any PHP shared host |
 | Media | in the pod or S3 | files in a folder |
 | Passwords | scrypt | PHP `password_hash` (an Orbiter admin needs `bin/lander passwd` after a move) |
-| Admin, editor, import, inbox, backup | yes | yes |
-| 2FA, review workflow, webhooks, analytics, form builder | yes | not yet |
+| Admin, editor, import, inbox, backup, users (admin/editor) | yes | yes |
+| 2FA, reviewer role, per-collection limits, review workflow, webhooks, analytics, form builder | yes | not yet |
 
 Lander is young and in use on a first live site. Expect rough edges and a growing feature list. Issues and pull requests are welcome.
 

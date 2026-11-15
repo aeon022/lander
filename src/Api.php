@@ -82,7 +82,7 @@ final class Api
             $r === 'forms' => $this->forms($m, array_slice($seg, 1)),
             $r === 'backup' && $m === 'GET' => $this->backup(),
             $r === 'restore' && $m === 'POST' => $this->restore(),
-            $r === 'users' && $n === 1 && $m === 'GET' => $this->json($this->isAdmin() ? $this->pod->all('SELECT id, username, role, created_at, last_login, totp_enabled FROM _users ORDER BY created_at') : []),
+            $r === 'users' => $this->users($m, array_slice($seg, 1)),
             $r === 'account' && ($seg[1] ?? '') === 'password' => $this->changePassword(),
             $r === 'account' && ($seg[1] ?? '') === 'username' => $this->changeUsername(),
             $r === 'account' && ($seg[1] ?? '') === 'sessions' => $this->sessions($m, $seg[2] ?? null),
@@ -417,6 +417,55 @@ final class Api
         $this->pod->run('INSERT INTO _media (id, filename, mime_type, size, data, alt, folder, url, path) VALUES (?,?,?,?,NULL,?,?,?,?)',
             [$id, $name, $type, filesize($path), $_POST['alt'] ?? null, $folder, $url, $path]);
         $this->json($this->pod->one('SELECT id, filename, mime_type, size, alt, folder, url, focal_x, focal_y, created_at FROM _media WHERE id = ?', [$id]), 201);
+    }
+
+    // ───────────────────────── users (admin) ─────────────────────────
+    /** GET/POST /api/users, PUT/DELETE /api/users/{id}. Roles: admin, editor (no reviewer, no per-collection limits, no 2FA yet). */
+    private function users(string $m, array $seg): void
+    {
+        if (!$this->isAdmin()) { $this->json(['error' => 'Admins only'], 403); return; }
+        $id = $seg[0] ?? null;
+        if ($id === null && $m === 'GET') { $this->json($this->pod->all('SELECT id, username, role, created_at, last_login, totp_enabled FROM _users ORDER BY created_at')); return; }
+        if ($id === null && $m === 'POST') {
+            $b = $this->body();
+            $name = is_string($b['username'] ?? null) ? trim($b['username']) : '';
+            $pass = is_string($b['password'] ?? null) ? $b['password'] : '';
+            $role = ($b['role'] ?? 'editor') === 'admin' ? 'admin' : 'editor';
+            if ($name === '' || $pass === '') { $this->json(['error' => 'username and password are required'], 400); return; }
+            if (!preg_match('/^[\p{L}\p{N}._@+-]{2,64}$/u', $name)) { $this->json(['error' => 'Username: 2–64 characters, letters, digits and . _ - @ + only'], 400); return; }
+            if (strlen($pass) < 10) { $this->json(['error' => 'Password must be at least 10 characters'], 400); return; }
+            if ($this->pod->userByName($name)) { $this->json(['error' => "User \"$name\" already exists"], 409); return; }
+            $uid = Pod::uuid();
+            $this->pod->run('INSERT INTO _users (id, username, password, role) VALUES (?,?,?,?)', [$uid, $name, password_hash($pass, PASSWORD_DEFAULT), $role]);
+            $this->json(['ok' => true, 'id' => $uid, 'username' => $name, 'role' => $role], 201); return;
+        }
+        $target = $id ? $this->pod->one('SELECT id, username, role FROM _users WHERE id = ?', [$id]) : null;
+        if (!$target) { $this->json(['error' => 'User not found'], 404); return; }
+        $self = $target['id'] === $this->user['id'];
+        if (($seg[1] ?? '') === 'permissions') {   // per-collection limits are not available: always unrestricted
+            if ($m === 'GET') { $this->json(['allowed' => null]); return; }
+            $this->json(['error' => 'Not available in Lander'], 501); return;
+        }
+        if ($m === 'PUT') {
+            $b = $this->body();
+            if (isset($b['role'])) {
+                if ($self) { $this->json(['error' => 'Cannot change your own role'], 400); return; }
+                $this->pod->run('UPDATE _users SET role = ? WHERE id = ?', [$b['role'] === 'admin' ? 'admin' : 'editor', $id]);
+            }
+            if (isset($b['password']) && $b['password'] !== '') {
+                if (!is_string($b['password']) || strlen($b['password']) < 10) { $this->json(['error' => 'Password must be at least 10 characters'], 400); return; }
+                $this->pod->run('UPDATE _users SET password = ? WHERE id = ?', [password_hash($b['password'], PASSWORD_DEFAULT), $id]);
+                $this->pod->run('DELETE FROM _sessions WHERE user_id = ? AND token <> ?', [$id, $self ? ($_COOKIE['orb_sess'] ?? '') : '']);
+            }
+            $this->json(['ok' => true]); return;
+        }
+        if ($m === 'DELETE') {
+            if ($self) { $this->json(['error' => 'Cannot delete your own account'], 400); return; }
+            $this->pod->run('DELETE FROM _sessions WHERE user_id = ?', [$id]);
+            $this->pod->run('DELETE FROM _users WHERE id = ?', [$id]);
+            $this->json(['ok' => true]); return;
+        }
+        $this->json(['error' => 'Not available in Lander'], 501);
     }
 
     // ───────────────────────── backup / restore (admin) ─────────────────────────
