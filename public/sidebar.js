@@ -21,6 +21,30 @@
     var activeCol = params.get('col') || params.get('collection');
     var page      = location.pathname.split('/').pop().replace('.html', '');
 
+    // Narrow screens: sidebar is a drawer, opened by a menu button in the topbar (CSS shows it ≤ 900px)
+    var nav = document.querySelector('.sidebar'), bar = document.querySelector('.topbar');
+    if (nav && bar && !bar.querySelector('.nav-toggle')) {
+      var tg = document.createElement('button');
+      tg.type = 'button'; tg.className = 'nav-toggle'; tg.textContent = '☰';
+      tg.setAttribute('aria-label', 'Menu'); tg.setAttribute('aria-expanded', 'false');
+      tg.onclick = function () { tg.setAttribute('aria-expanded', String(nav.classList.toggle('open'))); };
+      bar.insertBefore(tg, bar.firstChild);
+      nav.addEventListener('click', function (e) { if (e.target.closest('a')) { nav.classList.remove('open'); tg.setAttribute('aria-expanded', 'false'); } });
+    }
+
+    // Phones (Classic + Glass): bottom tab bar for the main areas; "Menu" opens the full sidebar drawer
+    if (nav && bar && (localStorage.getItem('orb_style') || 'xfce') !== 'xfce' && !document.querySelector('.mobile-tabbar')) {
+      var tabs = [['dashboard', '◧', 'Home'], ['calendar', '▤', 'Calendar'], ['media', '▣', 'Media'], ['settings', '⚙', 'Settings']];
+      if (document.documentElement.hasAttribute('data-lander')) tabs = tabs.filter(function (t) { return t[0] !== 'calendar'; }); // Lander: no calendar page
+      var tb = document.createElement('nav');
+      tb.className = 'mobile-tabbar'; tb.setAttribute('aria-label', 'Main');
+      tb.innerHTML = tabs.map(function (t) {
+        return '<a href="/' + t[0] + '.html"' + (page === t[0] ? ' class="active" aria-current="page"' : '') + '><span>' + t[1] + '</span>' + t[2] + '</a>';
+      }).join('') + '<button type="button" class="mt-menu"><span>☰</span>Menu</button>';
+      tb.querySelector('.mt-menu').onclick = function () { var t = bar.querySelector('.nav-toggle'); if (t) t.click(); };
+      document.body.appendChild(tb);
+    }
+
     fetch('/api/info', { credentials: 'include' })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (info) {
