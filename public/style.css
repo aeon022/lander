@@ -3499,7 +3499,8 @@ html[data-zen="1"] .main {
 
 /* ── Lander: Bereiche, die es in der PHP-Version (noch) nicht gibt, ausblenden ── */
 [href="/analytics.html"], [href="/build.html"], [href="/calendar.html"], [href="/forms.html"], [href="/graph.html"],
-[href="/inbox.html"], [href="/publish.html"], [href="/snippets.html"], [href="/pods.html"], [href="/users.html"] { display: none !important; }
+[href="/inbox.html"], [href="/publish.html"], [href="/snippets.html"], [href="/pods.html"] { display: none !important; }  /* users.html is available (user management) */
+html[data-role="editor"] [href$="users.html"] { display: none !important; }  /* editors cannot manage users */
 
 /* Lander: Bedienelemente ohne PHP-Gegenstück (KI, Kommentare, CSV, WordPress-/Pod-Import, Medien per URL, Feld umbenennen) */
 .ai-toolbar-btn, #suggest-trigger-btn, #ai-panel, #suggest-panel, #comments-section,

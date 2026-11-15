@@ -24,6 +24,8 @@
     });
     document.querySelectorAll('.snippet-card').forEach(function (d) { d.style.display = 'none'; });   // Inbox: Orbiter-Anleitung passt nicht
   }
+  // role of the signed-in user on <html data-role>: lets the CSS hide admin-only links (Users) from editors
+  try { fetch('/api/auth/me', { credentials: 'include' }).then(function (r) { return r.json(); }).then(function (d) { if (d && d.user) document.documentElement.setAttribute('data-role', d.user.role); }).catch(function () {}); } catch (e) {}
   var t; new MutationObserver(function () { clearTimeout(t); t = setTimeout(apply, 30); }).observe(document.documentElement, { childList: true, subtree: true });
   document.addEventListener('DOMContentLoaded', apply);
 })();
