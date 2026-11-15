@@ -14,7 +14,7 @@ require_once __DIR__ . '/Updater.php';
  */
 final class Api
 {
-    public const VERSION = '0.3.1';
+    public const VERSION = '0.3.2';
     private Pod $pod;
     private ?array $user = null;
     private const STATUSES = ['draft', 'in_review', 'published', 'scheduled'];
