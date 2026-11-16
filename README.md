@@ -36,6 +36,7 @@ The content lives in one SQL file (`content.pod`, a plain SQLite database, only 
 - **One-click update:** the admin tells admins when a newer release is out and can install it with one click. Every release ZIP is signed (Ed25519) and checked against the key built into Lander before anything is written. A backup of the pod and the code is saved first (`data/update-rollback/`). Needs the PHP `zip` and `sodium` extensions; otherwise you replace the files by hand.
 - **Users:** admins add editors and admins in the admin (Users page): create, change role, reset password, delete.
 - **Inbox:** form submissions server-to-server with a token.
+- **Two-factor sign-in (TOTP):** Settings → Security. Works with Google Authenticator, 1Password, Aegis; eight one-time recovery codes; codes cannot be replayed; failed codes are throttled per account.
 - **Hardened:** CSRF origin check, login throttling, escaped output, validated uploads, admin-only meta writes, request size limits. Sessions are HttpOnly, SameSite=Strict cookies.
 
 ## Quick start
@@ -115,8 +116,8 @@ Add your site's origin to `public_origins` in the config so browsers may read th
 | Hosting | VPS, local, desktop app | any PHP shared host |
 | Media | in the pod or S3 | files in a folder |
 | Passwords | scrypt | PHP `password_hash` (an Orbiter admin needs `bin/lander passwd` after a move) |
-| Admin, editor, import, inbox, backup, users (admin/editor) | yes | yes |
-| 2FA, reviewer role, per-collection limits, review workflow, webhooks, analytics, form builder | yes | not yet |
+| Admin, editor, import, inbox, backup, users (admin/editor), 2FA (TOTP) | yes | yes |
+| reviewer role, per-collection limits, review workflow, webhooks, analytics, form builder | yes | not yet |
 
 Lander is young and in use on a first live site. Expect rough edges and a growing feature list. Issues and pull requests are welcome.
 

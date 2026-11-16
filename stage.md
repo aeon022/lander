@@ -52,3 +52,8 @@
 ## 2026-11-15 — Deutsche Oberfläche (0.3.2)
 - `public/i18n.js` + `public/i18n-de.js` aus Orbiter (admin 0.3.97): übersetzt Textknoten/Platzhalter/Titel, wenn `localStorage.orb_lang = 'de'` (Einstellungen → Admin-Sprache DE, lädt neu). `theme.js` lädt die Skripte nur dann. Nutzerinhalte (Editor, Inputs, Code) werden nie angefasst. Dictionary ~600 Einträge; Rest bleibt Englisch.
 - Release 0.3.2 ist zugleich der echte Test des Updaters (0.3.1 → 0.3.2 über GitHub).
+
+## 2026-11-16 — Zwei-Faktor (TOTP) in Lander (0.3.3)
+- `src/Totp.php` (RFC 6238, Format wie Orbiter, Secrets/Recovery-Codes kompatibel), `Api::secondFactor` beim Login (Code oder Recovery-Code, Replay-Schutz über `totp_last`, 10 Versuche/15 min pro Konto zusätzlich zum IP-Limit), `Api::twoFactor` = GET/POST `/api/account/2fa[/setup|enable|disable]` wie Orbiter. Vorher wurde Login für Konten mit 2FA komplett verweigert (jetzt möglich, auch nach Umzug eines Orbiter-Pods).
+- `scripts/totp-selftest.php` (RFC-Vektoren). Getestet im Docker: Setup, falscher/richtiger Code, Login ohne/mit falschem Code, Replay (abgewiesen), nächster Zeitschritt, Recovery-Code einmalig, Rest-Anzeige. Nicht getestet: Disable, Authenticator-App am Handy.
+- Secret liegt unverschlüsselt im Pod (Orbiter kann at-rest verschlüsseln, Lander noch nicht).

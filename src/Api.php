@@ -6,6 +6,7 @@ require_once __DIR__ . '/Backup.php';
 require_once __DIR__ . '/Rebase.php';
 require_once __DIR__ . '/Image.php';
 require_once __DIR__ . '/Updater.php';
+require_once __DIR__ . '/Totp.php';
 
 /**
  * Lander API: the subset of Orbiter's admin API (packages/admin/src/routes) the Station UI needs,
@@ -14,7 +15,7 @@ require_once __DIR__ . '/Updater.php';
  */
 final class Api
 {
-    public const VERSION = '0.3.2';
+    public const VERSION = '0.3.3';
     private Pod $pod;
     private ?array $user = null;
     private const STATUSES = ['draft', 'in_review', 'published', 'scheduled'];
@@ -90,7 +91,7 @@ final class Api
             $r === 'account' && ($seg[1] ?? '') === 'password' => $this->changePassword(),
             $r === 'account' && ($seg[1] ?? '') === 'username' => $this->changeUsername(),
             $r === 'account' && ($seg[1] ?? '') === 'sessions' => $this->sessions($m, $seg[2] ?? null),
-            $r === 'account' && ($seg[1] ?? '') === '2fa' => $this->json(['enabled' => false, 'recoveryLeft' => 0]),
+            $r === 'account' && ($seg[1] ?? '') === '2fa' => $this->twoFactor($m, $seg[2] ?? ''),
             $r === 'api-keys' => $this->json(['keys' => []]),
             $r === 'webhooks' => $this->json(['hooks' => [], 'log' => []]),
             $r === 'templates' => $this->json([]),
@@ -119,7 +120,7 @@ final class Api
         static $dummy = null;
         $ok = password_verify($pass, $u['password'] ?? ($dummy ??= password_hash(bin2hex(random_bytes(12)), PASSWORD_DEFAULT)));
         if (!$u || !$ok) { $this->rateHit('login', $ip); $this->json(['error' => 'Invalid username or password'], 401); return; }
-        if (!empty($u['totp_enabled'])) { $this->json(['error' => 'Two-factor login is not available in Lander yet'], 401); return; }
+        if (!empty($u['totp_enabled']) && !$this->secondFactor($u, trim((string)($b['code'] ?? '')), $ip)) return;
 
         $token = bin2hex(random_bytes(32));
         $this->pod->run("DELETE FROM _sessions WHERE expires_at < datetime('now')");
@@ -130,6 +131,58 @@ final class Api
         if (password_needs_rehash($u['password'], PASSWORD_DEFAULT)) $this->pod->run('UPDATE _users SET password = ? WHERE id = ?', [password_hash($pass, PASSWORD_DEFAULT), $u['id']]);
         setcookie('orb_sess', $token, ['expires' => time() + 30 * 86400, 'path' => $this->cookiePath(), 'httponly' => true, 'samesite' => 'Strict', 'secure' => $this->https()]);
         $this->json(['ok' => true, 'user' => ['id' => $u['id'], 'username' => $u['username'], 'role' => $u['role']]]);
+    }
+
+    /** Checks the TOTP code (or a recovery code) at login. Answers the request itself when it fails. */
+    private function secondFactor(array $u, string $code, string $ip): bool
+    {
+        if ($code === '') { $this->json(['error' => 'Two-factor code required', 'totp' => true], 401); return false; }
+        // per-account cap on top of the per-IP one, so spread-out guessing cannot walk the 6-digit space
+        if (!$this->rateOk('totp', $u['id'], 10, 900)) { $this->json(['error' => 'Too many attempts. Try again in 15 minutes.', 'totp' => true], 429); return false; }
+        $step = Totp::verify((string)$u['totp_secret'], $code, (int)$u['totp_last']);
+        if ($step !== null) { $this->pod->run('UPDATE _users SET totp_last = ? WHERE id = ?', [$step, $u['id']]); return true; }
+        $rec = json_decode((string)$u['totp_recovery'], true) ?: []; $h = Totp::hashRecovery($code);
+        if (in_array($h, $rec, true)) { $this->pod->run('UPDATE _users SET totp_recovery = ? WHERE id = ?', [json_encode(array_values(array_diff($rec, [$h]))), $u['id']]); return true; }
+        $this->rateHit('totp', $u['id']); $this->rateHit('login', $ip);
+        $this->json(['error' => 'Invalid code', 'totp' => true], 401);
+        return false;
+    }
+
+    /** GET /api/account/2fa, POST setup | enable | disable (same contract as Orbiter). */
+    private function twoFactor(string $m, string $act): void
+    {
+        $u = $this->pod->userByName($this->user['username']);
+        $b = $this->body();
+        if ($act === '' && $m === 'GET') {
+            $left = !empty($u['totp_enabled']) ? count(json_decode((string)$u['totp_recovery'], true) ?: []) : 0;
+            $this->json(['enabled' => !empty($u['totp_enabled']), 'recoveryLeft' => $left]); return;
+        }
+        if ($m !== 'POST') { $this->json(['error' => 'Method not allowed'], 405); return; }
+        $pwOk = fn() => password_verify((string)($b['currentPassword'] ?? ''), $u['password']);
+        if ($act === 'setup') {
+            if (!empty($u['totp_enabled'])) { $this->json(['error' => '2FA is already enabled'], 409); return; }
+            if (!$pwOk()) { $this->json(['error' => 'Current password is incorrect'], 401); return; }
+            $sec = Totp::secret();
+            $this->pod->run('UPDATE _users SET totp_secret = ?, totp_enabled = 0, totp_recovery = NULL, totp_last = 0 WHERE id = ?', [$sec, $u['id']]);
+            $this->json(['secret' => $sec, 'uri' => Totp::uri($sec, $u['username'])]); return;
+        }
+        if ($act === 'enable') {
+            $step = ($u['totp_secret'] && empty($u['totp_enabled'])) ? Totp::verify((string)$u['totp_secret'], (string)($b['code'] ?? '')) : null;
+            if ($step === null) { $this->json(['error' => 'Code did not match — check the time on your phone and try again'], 400); return; }
+            $codes = Totp::recoveryCodes();
+            $this->pod->run('UPDATE _users SET totp_enabled = 1, totp_recovery = ?, totp_last = ? WHERE id = ?', [json_encode(array_map([Totp::class, 'hashRecovery'], $codes)), $step, $u['id']]);
+            $this->pod->run('DELETE FROM _sessions WHERE user_id = ? AND token <> ?', [$u['id'], $_COOKIE['orb_sess'] ?? '']);
+            $this->json(['ok' => true, 'recoveryCodes' => $codes]); return;
+        }
+        if ($act === 'disable') {
+            if (empty($u['totp_enabled'])) { $this->json(['error' => '2FA is not enabled'], 400); return; }
+            if (!$pwOk()) { $this->json(['error' => 'Current password is incorrect'], 401); return; }
+            $code = (string)($b['code'] ?? ''); $rec = json_decode((string)$u['totp_recovery'], true) ?: [];
+            if (Totp::verify((string)$u['totp_secret'], $code, (int)$u['totp_last']) === null && !in_array(Totp::hashRecovery($code), $rec, true)) { $this->json(['error' => 'Invalid code'], 401); return; }
+            $this->pod->run('UPDATE _users SET totp_secret = NULL, totp_enabled = 0, totp_recovery = NULL, totp_last = 0 WHERE id = ?', [$u['id']]);
+            $this->json(['ok' => true]); return;
+        }
+        $this->json(['error' => 'Not found'], 404);
     }
 
     private function logout(): void
