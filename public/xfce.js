@@ -1482,6 +1482,7 @@
               : page === 'entries' && activeCol === col.id;
             var abbr = col.label.substring(0, 2);
             var item = makeDockItem(abbr, col.label, href, isActive, false);
+            item.title = col.label;   // the dock label is cut short; the full name shows on hover
             item.querySelector('.xfce-dock-icon').style.cssText = 'font-size:16px;font-weight:700;font-family:var(--mono);letter-spacing:-.03em;line-height:1;';
             item.dataset.dockIdx = idx + 1;
             item.addEventListener('mouseenter', function () { showColPreview(col, item); });
@@ -1490,6 +1491,16 @@
             _palItems.push({ icon: abbr, label: col.label, href: href, group: 'Collections' });
             _termCols.push({ id: col.id, label: col.label, total: col.total || 0, drafts: col.drafts || 0, singleton: !!col.singleton });
           }
+
+          // Always sum collections up by kind so the dock stays short: single pages and dynamic lists each get one drawer
+          // (a kind with just one collection stays a plain icon). Groups made by hand in Settings keep their place.
+          [['Pages', function (c) { return !!c.singleton; }], ['Dynamic', function (c) { return !c.singleton; }]].forEach(function (k) {
+            var rest = topLevel.filter(function (c) { return !groupedIds.has(c.id) && k[1](c); });
+            if (rest.length < 2) return;
+            navGroups = navGroups || {};
+            navGroups[k[0]] = (navGroups[k[0]] || []).concat(rest.map(function (c) { return c.id; }));
+            rest.forEach(function (c) { groupedIds.add(c.id); });
+          });
 
           // Drawer groups
           if (navGroups) {
