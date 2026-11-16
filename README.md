@@ -37,6 +37,7 @@ The content lives in one SQL file (`content.pod`, a plain SQLite database, only 
 - **Users:** admins add editors and admins in the admin (Users page): create, change role, reset password, delete.
 - **Inbox:** form submissions server-to-server with a token.
 - **Two-factor sign-in (TOTP):** Settings → Security. Works with Google Authenticator, 1Password, Aegis; eight one-time recovery codes; codes cannot be replayed; failed codes are throttled per account.
+- **Digi-ID (DigiByte wallet) sign-in:** link a DigiByte address under Account, then scan the QR code on the login page. Passwordless and bound to your domain; the password login stays. Needs the PHP `gmp` or `bcmath` extension and a public HTTPS address.
 - **Webhooks and build trigger:** on publish, Lander can call a build webhook (Netlify, Vercel, GitHub Actions: Settings → Build) and any number of signed webhooks (publish, delete; HMAC-SHA256, delivery log). Your Astro site rebuilds itself when an editor publishes.
 - **Hardened:** CSRF origin check, login throttling, escaped output, validated uploads, admin-only meta writes, request size limits. Sessions are HttpOnly, SameSite=Strict cookies.
 
@@ -117,7 +118,7 @@ Add your site's origin to `public_origins` in the config so browsers may read th
 | Hosting | VPS, local, desktop app | any PHP shared host |
 | Media | in the pod or S3 | files in a folder |
 | Passwords | scrypt | PHP `password_hash` (an Orbiter admin needs `bin/lander passwd` after a move) |
-| Admin, editor, import, inbox, backup, users (admin/editor), 2FA (TOTP) | yes | yes |
+| Admin, editor, import, inbox, backup, users (admin/editor), 2FA (TOTP), Digi-ID | yes | yes |
 | reviewer role, per-collection limits, review workflow, analytics, form builder | yes | not yet |
 
 Lander is young and in use on a first live site. Expect rough edges and a growing feature list. Issues and pull requests are welcome.

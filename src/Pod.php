@@ -24,6 +24,7 @@ final class Pod
     {
         $this->db->exec(<<<SQL
             CREATE TABLE IF NOT EXISTS _meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS _digiid (address TEXT PRIMARY KEY, user_id TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')));
             CREATE TABLE IF NOT EXISTS _collections (
               id TEXT PRIMARY KEY, label TEXT NOT NULL, schema TEXT NOT NULL,
               singleton INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now')));

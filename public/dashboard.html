@@ -210,7 +210,7 @@
             b.addEventListener('click', function () {
               if (!confirm('Update Lander to ' + u.latest + '? A backup of the content and the code is saved first.')) return;
               b.disabled = true; b.textContent = 'Updating…';
-              fetch('/api/update/apply', { method: 'POST', credentials: 'include' }).then(function (r) { return r.json(); }).then(function (j) {
+              fetch('/api/update/apply', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(function (r) { return r.json(); }).then(function (j) {
                 if (j.ok) { b.textContent = 'Done – reloading'; setTimeout(function () { location.reload(); }, 800); }
                 else { b.disabled = false; b.textContent = 'Update now'; alert(j.error || 'Update failed'); }
               }).catch(function () { b.disabled = false; b.textContent = 'Update now'; alert('Update failed'); });

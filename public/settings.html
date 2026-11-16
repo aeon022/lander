@@ -1065,7 +1065,7 @@
             ev.preventDefault();
             if (!confirm('Update Lander to ' + u.latest + '? A backup of the content and the code is saved first.')) return;
             ap.textContent = 'Updating…';
-            try { const j = await (await fetch('/api/update/apply', { method: 'POST', credentials: 'include' })).json(); if (j.ok) { location.reload(); return; } alert(j.error || 'Update failed'); } catch { alert('Update failed'); }
+            try { const j = await (await fetch('/api/update/apply', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}' })).json(); if (j.ok) { location.reload(); return; } alert(j.error || 'Update failed'); } catch { alert('Update failed'); }
             ap.textContent = 'Update now';
           });
         };

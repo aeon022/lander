@@ -8,6 +8,7 @@ require_once __DIR__ . '/Image.php';
 require_once __DIR__ . '/Updater.php';
 require_once __DIR__ . '/Totp.php';
 require_once __DIR__ . '/Webhooks.php';
+require_once __DIR__ . '/DigiId.php';
 
 /**
  * Lander API: the subset of Orbiter's admin API (packages/admin/src/routes) the Station UI needs,
@@ -16,7 +17,7 @@ require_once __DIR__ . '/Webhooks.php';
  */
 final class Api
 {
-    public const VERSION = '0.4.0';
+    public const VERSION = '0.5.0';
     private Pod $pod;
     private ?array $user = null;
     private const STATUSES = ['draft', 'in_review', 'published', 'scheduled'];
@@ -44,6 +45,8 @@ final class Api
             if ($method === 'OPTIONS') { http_response_code(204); return; }
             $this->pod = new Pod($this->cfg['pod']);
             if ($method === 'POST' && preg_match('#^/api/form/([a-z0-9_-]{1,64})$#', $path, $fm)) { $this->formSubmit($fm[1]); return; }
+            // Digi-ID: the wallet posts to /callback without cookies or an Origin header, so this sits before the CSRF check
+            if (str_starts_with($path, '/api/digiid/')) { $this->digiidPublic($method, substr($path, 12)); return; }
             if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true) && !$this->sameOrigin()) { $this->json(['error' => 'CSRF check failed'], 403); return; }
             if (in_array($method, ['POST', 'PUT', 'PATCH'], true) && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > ((int)($this->cfg[$path === '/api/restore' ? 'max_restore_mb' : 'max_upload_mb'] ?? ($path === '/api/restore' ? 100 : 12)) + 1) * 1048576) { $this->json(['error' => 'Payload too large'], 413); return; }
 
@@ -92,6 +95,7 @@ final class Api
             $r === 'account' && ($seg[1] ?? '') === 'password' => $this->changePassword(),
             $r === 'account' && ($seg[1] ?? '') === 'username' => $this->changeUsername(),
             $r === 'account' && ($seg[1] ?? '') === 'sessions' => $this->sessions($m, $seg[2] ?? null),
+            $r === 'account' && ($seg[1] ?? '') === 'digiid' => $this->digiidAccount($m, array_slice($seg, 2)),
             $r === 'account' && ($seg[1] ?? '') === '2fa' => $this->twoFactor($m, $seg[2] ?? ''),
             $r === 'api-keys' => $this->json(['keys' => []]),
             $r === 'webhooks' => $this->webhooks($m, array_slice($seg, 1)),
@@ -123,14 +127,8 @@ final class Api
         if (!$u || !$ok) { $this->rateHit('login', $ip); $this->json(['error' => 'Invalid username or password'], 401); return; }
         if (!empty($u['totp_enabled']) && !$this->secondFactor($u, trim((string)($b['code'] ?? '')), $ip)) return;
 
-        $token = bin2hex(random_bytes(32));
-        $this->pod->run("DELETE FROM _sessions WHERE expires_at < datetime('now')");
-        $this->pod->run('INSERT INTO _sessions (token, user_id, expires_at, ip, ua) VALUES (?,?,?,?,?)',
-            [$token, $u['id'], gmdate('Y-m-d H:i:s', time() + 30 * 86400), $ip, substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 200)]);
-        $this->pod->run("UPDATE _users SET last_login = datetime('now') WHERE id = ?", [$u['id']]);
-        if ($u['role'] === 'admin') Backup::auto($this->cfg, $this->pod);
+        $this->startSession($u, $ip);
         if (password_needs_rehash($u['password'], PASSWORD_DEFAULT)) $this->pod->run('UPDATE _users SET password = ? WHERE id = ?', [password_hash($pass, PASSWORD_DEFAULT), $u['id']]);
-        setcookie('orb_sess', $token, ['expires' => time() + 30 * 86400, 'path' => $this->cookiePath(), 'httponly' => true, 'samesite' => 'Strict', 'secure' => $this->https()]);
         $this->json(['ok' => true, 'user' => ['id' => $u['id'], 'username' => $u['username'], 'role' => $u['role']]]);
     }
 
@@ -154,6 +152,71 @@ final class Api
         if (($seg[1] ?? '') === 'test' && $m === 'POST') {
             foreach ($hooks as $h) if ($h['id'] === $id) { $e = Webhooks::deliver($this->pod, $h, 'ping', ['message' => 'Test delivery from Lander']); $this->json(['ok' => $e['ok'], 'status' => $e['status'], 'error' => $e['error']]); return; }
             $this->json(['error' => 'Not found'], 404); return;
+        }
+        $this->json(['error' => 'Not found'], 404);
+    }
+
+    // ───────────────────────── Digi-ID ─────────────────────────
+    private function host(): string { return strtolower(trim(explode(',', $_SERVER['HTTP_X_FORWARDED_HOST'] ?? $_SERVER['HTTP_HOST'] ?? '')[0])); }
+    private function digiidPublic(string $m, string $act): void
+    {
+        $dir = rtrim($this->cfg['data_dir'], '/'); $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+        if (!DigiId::available()) { $this->json(['error' => 'Digi-ID needs the PHP gmp or bcmath extension'], 501); return; }
+        if ($act === 'challenge' && $m === 'POST') {
+            if (!$this->rateOk('digiid', $ip, 30, 900)) { $this->json(['error' => 'Too many requests'], 429); return; }
+            $this->rateHit('digiid', $ip);
+            $host = $this->host();
+            if (!preg_match('/^[a-z0-9.-]+(:\d+)?$/', $host)) { $this->json(['error' => 'Bad host'], 400); return; }
+            $this->json(DigiId::create($dir, 'login', null, $host, $this->https(), (string)($this->cfg['base_path'] ?? ''))); return;
+        }
+        if ($act === 'callback' && $m === 'POST') {
+            if (!$this->rateOk('digiid-cb', $ip, 60, 900)) { $this->json(['error' => 'Too many requests'], 429); return; }
+            $this->rateHit('digiid-cb', $ip);
+            $r = DigiId::check($dir, $this->body());
+            if (isset($r['error'])) { $this->json(['error' => $r['error']], 400); return; }
+            $ch = $r['challenge']; $addr = $r['address'];
+            if ($ch['purpose'] === 'login') {
+                $row = $this->pod->one('SELECT u.id FROM _digiid d JOIN _users u ON u.id = d.user_id WHERE d.address = ?', [$addr]);
+                if (!$row) { $ch['status'] = 'unknown'; DigiId::save($dir, $r['nonce'], $ch); $this->json(['error' => 'This address is not linked to an account'], 403); return; }
+                $ch['status'] = 'ok'; $ch['userId'] = $row['id'];
+            } else {
+                $own = $this->pod->one('SELECT user_id FROM _digiid WHERE address = ?', [$addr]);
+                if ($own && $own['user_id'] !== $ch['userId']) { $ch['status'] = 'taken'; DigiId::save($dir, $r['nonce'], $ch); $this->json(['error' => 'Address already linked to another account'], 409); return; }
+                if (!$own) $this->pod->run('INSERT INTO _digiid (address, user_id) VALUES (?, ?)', [$addr, $ch['userId']]);
+                $ch['status'] = 'ok';
+            }
+            $ch['address'] = $addr; DigiId::save($dir, $r['nonce'], $ch);
+            $this->json(['address' => $addr, 'nonce' => $r['nonce']]); return;
+        }
+        if ($act === 'status' && $m === 'GET') {
+            $nonce = (string)($_GET['nonce'] ?? ''); $ch = DigiId::load($dir, $nonce);
+            if (!$ch || !hash_equals((string)$ch['poll'], (string)($_GET['poll'] ?? ''))) { $this->json(['status' => 'expired'], 404); return; }
+            if ($ch['status'] === 'pending') { $this->json(['status' => 'pending']); return; }
+            DigiId::drop($dir, $nonce);
+            if ($ch['status'] !== 'ok') { $this->json(['status' => $ch['status']]); return; }
+            if ($ch['purpose'] !== 'login') { $this->json(['status' => 'ok', 'address' => $ch['address']]); return; }
+            $u = $this->pod->one('SELECT id, username, role FROM _users WHERE id = ?', [$ch['userId']]);
+            if (!$u) { $this->json(['status' => 'unknown']); return; }
+            $this->startSession($u, $ip);
+            $this->json(['status' => 'ok', 'user' => $u]); return;
+        }
+        $this->json(['error' => 'Not found'], 404);
+    }
+
+    /** GET /api/account/digiid · POST link {currentPassword} · DELETE {address} {currentPassword} */
+    private function digiidAccount(string $m, array $seg): void
+    {
+        $u = $this->pod->userByName($this->user['username']); $b = $this->body();
+        $pw = fn() => password_verify((string)($b['currentPassword'] ?? ''), $u['password']);
+        if (!$seg && $m === 'GET') { $this->json(['addresses' => $this->pod->all('SELECT address, created_at FROM _digiid WHERE user_id = ? ORDER BY created_at', [$u['id']])]); return; }
+        if (!DigiId::available()) { $this->json(['error' => 'Digi-ID needs the PHP gmp or bcmath extension'], 501); return; }
+        if (($seg[0] ?? '') === 'link' && $m === 'POST') {
+            if (!$pw()) { $this->json(['error' => 'Current password is incorrect'], 401); return; }
+            $this->json(DigiId::create(rtrim($this->cfg['data_dir'], '/'), 'link', $u['id'], $this->host(), $this->https(), (string)($this->cfg['base_path'] ?? ''))); return;
+        }
+        if (count($seg) === 1 && $m === 'DELETE' && DigiId::looksLikeAddress($seg[0])) {
+            if (!$pw()) { $this->json(['error' => 'Current password is incorrect'], 401); return; }
+            $this->pod->run('DELETE FROM _digiid WHERE address = ? AND user_id = ?', [$seg[0], $u['id']]); $this->json(['ok' => true]); return;
         }
         $this->json(['error' => 'Not found'], 404);
     }
@@ -208,6 +271,18 @@ final class Api
             $this->json(['ok' => true]); return;
         }
         $this->json(['error' => 'Not found'], 404);
+    }
+
+    /** Opens a session for $u (array with id, role) and sets the cookie. Shared by password and Digi-ID sign-in. */
+    private function startSession(array $u, string $ip): void
+    {
+        $token = bin2hex(random_bytes(32));
+        $this->pod->run("DELETE FROM _sessions WHERE expires_at < datetime('now')");
+        $this->pod->run('INSERT INTO _sessions (token, user_id, expires_at, ip, ua) VALUES (?,?,?,?,?)',
+            [$token, $u['id'], gmdate('Y-m-d H:i:s', time() + 30 * 86400), $ip, substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 200)]);
+        $this->pod->run("UPDATE _users SET last_login = datetime('now') WHERE id = ?", [$u['id']]);
+        if (($u['role'] ?? '') === 'admin') Backup::auto($this->cfg, $this->pod);
+        setcookie('orb_sess', $token, ['expires' => time() + 30 * 86400, 'path' => $this->cookiePath(), 'httponly' => true, 'samesite' => 'Strict', 'secure' => $this->https()]);
     }
 
     private function logout(): void
