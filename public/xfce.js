@@ -1481,8 +1481,10 @@
               ? page === 'editor' && activeCol === col.id
               : page === 'entries' && activeCol === col.id;
             var abbr = col.label.substring(0, 2);
-            var item = makeDockItem(abbr, col.label, href, isActive, false);
-            item.title = col.label;   // the dock label is cut short; the full name shows on hover
+            // dock name: the first part of the label ("Referenzen (Projekte)" → "Referenzen", "Auftraggeber & Partner" → "Auftraggeber")
+            var short = col.label.replace(/\s*\(.*?\)\s*/g, ' ').split(/\s+[&\/·,–-]\s+|,/)[0].trim() || col.label;
+            var item = makeDockItem(abbr, short, href, isActive, false);
+            item.title = col.label;   // the dock shows the short name; the full name shows on hover
             item.querySelector('.xfce-dock-icon').style.cssText = 'font-size:16px;font-weight:700;font-family:var(--mono);letter-spacing:-.03em;line-height:1;';
             item.dataset.dockIdx = idx + 1;
             item.addEventListener('mouseenter', function () { showColPreview(col, item); });
@@ -1492,15 +1494,16 @@
             _termCols.push({ id: col.id, label: col.label, total: col.total || 0, drafts: col.drafts || 0, singleton: !!col.singleton });
           }
 
-          // Always sum collections up by kind so the dock stays short: single pages and dynamic lists each get one drawer
-          // (a kind with just one collection stays a plain icon). Groups made by hand in Settings keep their place.
-          [['Pages', function (c) { return !!c.singleton; }], ['Dynamic', function (c) { return !c.singleton; }]].forEach(function (k) {
-            var rest = topLevel.filter(function (c) { return !groupedIds.has(c.id) && k[1](c); });
-            if (rest.length < 2) return;
+          // Safety net: groups are made by hand (Settings → Navigation, by topic). If more than DOCK_MAX collections stay
+          // ungrouped, the rest moves into one "More" drawer so the dock never outgrows the screen.
+          var DOCK_MAX = 6;
+          var loose = topLevel.filter(function (c) { return !groupedIds.has(c.id); });
+          if (loose.length > DOCK_MAX) {
+            var over = loose.slice(DOCK_MAX - 1);   // the drawer itself takes the last free place
             navGroups = navGroups || {};
-            navGroups[k[0]] = (navGroups[k[0]] || []).concat(rest.map(function (c) { return c.id; }));
-            rest.forEach(function (c) { groupedIds.add(c.id); });
-          });
+            navGroups['More'] = (navGroups['More'] || []).concat(over.map(function (c) { return c.id; }));
+            over.forEach(function (c) { groupedIds.add(c.id); });
+          }
 
           // Drawer groups
           if (navGroups) {

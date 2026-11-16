@@ -1921,9 +1921,6 @@ html:not([data-style="xfce"]) .xfce-hud { display: none !important; }
   margin-top: 3px;
   color: var(--text);
   white-space: nowrap;
-  max-width: 10ch;          /* long names are cut with … (full name in the tooltip) */
-  overflow: hidden;
-  text-overflow: ellipsis;
   transition: color .12s, opacity .12s;
   opacity: .8;
 }
