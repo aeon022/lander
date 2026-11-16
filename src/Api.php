@@ -17,7 +17,7 @@ require_once __DIR__ . '/DigiId.php';
  */
 final class Api
 {
-    public const VERSION = '0.5.2';
+    public const VERSION = '0.5.3';
     private Pod $pod;
     private ?array $user = null;
     private const STATUSES = ['draft', 'in_review', 'published', 'scheduled'];
@@ -161,6 +161,13 @@ final class Api
      * answer /lander/media/x.jpg themselves and never reach public/media, which showed as missing thumbnails in the admin.
      * Falls back to the redirect only when the file is not on disk.
      */
+    /** The media folder holds uploads only: keep the 'never execute' .htaccess in place (it is not part of the release ZIP, so a folder replace cannot wipe the uploads). */
+    public static function guardMedia(string $dir): void
+    {
+        $src = __DIR__ . '/media.htaccess'; $dst = rtrim($dir, '/') . '/.htaccess';
+        if (is_file($src) && is_dir($dir) && (!is_file($dst) || md5_file($dst) !== md5_file($src))) @copy($src, $dst);
+    }
+
     private function sendMedia(array $item): void
     {
         $f = (string)($item['path'] ?? ''); $real = $f !== '' ? realpath($f) : false; $root = realpath((string)($this->cfg['media_dir'] ?? ''));
@@ -593,6 +600,7 @@ final class Api
         $name = substr($id, 0, 8) . '-' . substr($base, 0, 60) . '.' . self::MEDIA_TYPES[$type];
         $dir = rtrim($this->cfg['media_dir'], '/') . ($folder !== '' ? "/$folder" : '');
         if (!is_dir($dir) && !mkdir($dir, 0755, true)) { $this->json(['error' => 'Cannot create media folder'], 500); return; }
+        self::guardMedia((string)$this->cfg['media_dir']);
         $path = "$dir/$name";
         if (!move_uploaded_file($f['tmp_name'], $path)) { $this->json(['error' => 'Upload failed'], 500); return; }
         chmod($path, 0644);

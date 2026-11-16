@@ -29,7 +29,7 @@ The content lives in one SQL file (`content.pod`, a plain SQLite database, only 
 - **Live read API:** `/api/public/<collection>[/<slug>]` with CORS for your sites and a short cache (10 s by default). Image, file and media fields are resolved to `{ id, url, alt, type }`.
 - **Image variants:** `/api/public/media/<id>?w=800&ar=16:9&fmt=webp`, resized, cropped around the focal point and re-encoded (GD), cached on disk. Sizes, ratios and formats snap to fixed sets, so the cache stays bounded.
 - **Markdown import:** `.md` with frontmatter through Admin → Import or `bin/lander import-md`.
-- **Media as files:** uploads go to `public/media/` (JPG, PNG, WebP, GIF, AVIF, PDF; real file type checked, PHP execution blocked there).
+- **Media as files:** uploads go to `public/media/` (this folder is not part of the release ZIP, so unpacking a release over your install cannot overwrite your uploads; never "replace" the folder by hand) (JPG, PNG, WebP, GIF, AVIF, PDF; real file type checked, PHP execution blocked there).
 - **Installer:** open `install.php` once. It detects subfolder or domain root, writes the config, creates the first admin and deletes itself.
 - **Subfolder or subdomain:** `example.at/lander/` works as well as `redaktion.example.at`.
 - **Backup, restore, move:** automatic weekly backups, download as SQL file or ZIP with media, restore with validation, `bin/lander backup` for cron.

@@ -103,6 +103,7 @@ final class Updater
             @$z->close();
             @unlink($tmpZip);
         }
+        Api::guardMedia((string)$cfg['media_dir']);
         // the new UI files carry unprefixed paths: put the install's base back in
         Rebase::run("$root/public", Rebase::current("$root/public"));
         if (function_exists('opcache_reset')) @opcache_reset();

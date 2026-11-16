@@ -1,7 +1,6 @@
 lander.config.php
 data/*
 !data/.htaccess
-public/media/*
-!public/media/.htaccess
+public/media/
 .DS_Store
 public/.base

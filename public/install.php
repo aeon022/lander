@@ -43,6 +43,7 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && $ok) {
         try {
             $media = $root . '/public/media';
             if (!is_dir($media)) mkdir($media, 0755, true);
+            @copy($root . '/src/media.htaccess', $media . '/.htaccess');
             $cfg = "<?php\n// Created by install.php\nreturn " . var_export([
                 'pod' => $root . '/data/content.pod', 'data_dir' => $root . '/data', 'media_dir' => $media,
                 'media_url' => $base . '/media', 'base_path' => $base, 'max_upload_mb' => 12, 'max_restore_mb' => 100,

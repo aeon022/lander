@@ -74,3 +74,8 @@
 ## 2026-11-16 — Medien-Vorschaubilder (0.5.2)
 - Melder: im Admin keine Vorschaubilder in der Medienübersicht (Pinas Testserver). `/api/media/:id/raw` und `/api/public/media/:id` leiteten per 302 auf die statische URL (`/lander/media/x.jpg`) um; auf Hosts, bei denen nginx statische Dateien selbst ausliefert (Plesk) oder im Unterordner, erreicht die Anfrage `public/media` nie (404). Lokal (Apache, Wurzel und Unterordner) nicht reproduzierbar, Ursache am echten Server **nicht** bestätigt.
 - Fix: `Api::sendMedia` liefert die Datei selbst aus (Pfad geprüft gegen `media_dir`, `nosniff`, CSP-sandbox, Cache), Redirect nur noch, wenn die Datei nicht auf der Platte liegt. Getestet im Docker: raw/public 200 mit Bild, Medienseite zeigt Vorschau.
+
+## 2026-11-16 — Medienordner nicht mehr im Release (0.5.3)
+- Ursache der fehlenden Vorschaubilder auf Pinas Testserver (laut Nutzer): beim Hochladen des Update-Pakets wurde `public/media` ersetzt. Das Paket enthielt `public/media/.htaccess`, „Ersetzen" des Ordners löscht die bisherigen Uploads. Die Dateien sind dort weg (Pod-Zeilen bleiben), Wiederherstellung nur durch erneutes Hochladen.
+- Fix: `.htaccess` des Medienordners liegt jetzt als Vorlage in `src/media.htaccess`; `public/media/` ist nicht mehr im Repo/ZIP. `install.php`, jeder Upload (`Api::guardMedia`) und der Updater legen die Datei selbst an bzw. erneuern sie. Getestet: Ordner fehlt im Baum, Upload legt ihn samt `.htaccess` an, PHP-Datei dort → 403.
+- Pakete für Pina enthalten keinen `media`-Ordner mehr.
