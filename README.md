@@ -39,6 +39,7 @@ The content lives in one SQL file (`content.pod`, a plain SQLite database, only 
 - **Two-factor sign-in (TOTP):** Settings → Security. Works with Google Authenticator, 1Password, Aegis; eight one-time recovery codes; codes cannot be replayed; failed codes are throttled per account.
 - **Digi-ID (DigiByte wallet) sign-in:** link a DigiByte address under Account, then scan the QR code on the login page. Passwordless and bound to your domain; the password login stays. Needs the PHP `gmp` or `bcmath` extension and a public HTTPS address.
 - **Webhooks and build trigger:** on publish, Lander can call a build webhook (Netlify, Vercel, GitHub Actions: Settings → Build) and any number of signed webhooks (publish, delete; HMAC-SHA256, delivery log). Your Astro site rebuilds itself when an editor publishes.
+- **Strict Content-Security-Policy on the admin:** the admin pages are served through PHP with a one-time nonce on every script and a policy that blocks injected scripts and inline handlers.
 - **Hardened:** CSRF origin check, login throttling, escaped output, validated uploads, admin-only meta writes, request size limits. Sessions are HttpOnly, SameSite=Strict cookies.
 
 ## Quick start

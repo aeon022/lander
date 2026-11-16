@@ -9,7 +9,9 @@ RewriteRule ^health$ index.php [L]
 # Kurz-URLs wie in Orbiter (/dashboard → /dashboard.html)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME}.html -f
-RewriteRule ^([a-z-]+)$ $1.html [L]
+RewriteRule ^([a-z-]+)$ index.php [L,QSA]
+# admin pages are sent through PHP: nonce + Content-Security-Policy (see index.php)
+RewriteRule ^[a-z0-9-]+\.html$ index.php [L,QSA]
 <FilesMatch "\.(pod|sqlite|db|json\.bak|md)$">
   Require all denied
 </FilesMatch>

@@ -89,3 +89,8 @@
 
 ## 2026-11-16 — Audit: Dateirechte (0.5.6)
 - Pod (`Pod::__construct`), Backups (`Backup::snapshot`) und Update-Rollback-ZIP werden mit 0600 angelegt bzw. nachgezogen, Backup-Ordner 0700; Grund: ein Web-Server, der `data/.htaccess` ignoriert, soll sie nicht ausliefern können. `SECURITY.md` ergänzt, GitHub-Sicherheitsfunktionen aktiviert.
+
+## 2026-11-16 — Strikte CSP für die Lander-Oberfläche (0.6.0)
+- `public/index.php` liefert Admin-Seiten (`/<name>.html` und Kurz-URL `/<name>`) selbst aus: Nonce an jedem `<script>`, `Content-Security-Policy` (wie Orbiter: `script-src 'nonce-…' 'strict-dynamic' 'self'`, kein `unsafe-inline` für Skripte, `frame-ancestors 'self'`), `X-Frame-Options: DENY`. `public/.htaccess` leitet `*.html` dorthin. Alle 81 Inline-Handler → `data-on-*` (Dispatcher aus `theme.js`, `orbH`-Helfer; `theme.js` auf Orbiter-Stand inkl. Skript-Ladung per `createElement`).
+- Getestet (Docker, PHP 8.3/Apache): Hauptordner und Unterordner `/lander`, Deutsch und Englisch: alle 11 Seiten ohne CSP-Verstoß/Seitenfehler, alle Handler-Funktionen vorhanden, alle Klick-Elemente (ohne Löschen) ausgelöst. Nicht einzeln durchgeklickt: jede Editor-Aktion (Tabellen, Video, KI) – wie bei Orbiter.
+- Achtung: Hosts ohne mod_rewrite/`.htaccess` (nur nginx) bedienen Lander ohnehin nicht (API-Routing).
