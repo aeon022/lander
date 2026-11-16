@@ -17,7 +17,7 @@ require_once __DIR__ . '/DigiId.php';
  */
 final class Api
 {
-    public const VERSION = '0.5.1';
+    public const VERSION = '0.5.2';
     private Pod $pod;
     private ?array $user = null;
     private const STATUSES = ['draft', 'in_review', 'published', 'scheduled'];
@@ -154,6 +154,25 @@ final class Api
             $this->json(['error' => 'Not found'], 404); return;
         }
         $this->json(['error' => 'Not found'], 404);
+    }
+
+    /**
+     * Sends the stored file itself. Not a redirect to its static URL: many hosts (nginx in front of Apache, subfolder installs)
+     * answer /lander/media/x.jpg themselves and never reach public/media, which showed as missing thumbnails in the admin.
+     * Falls back to the redirect only when the file is not on disk.
+     */
+    private function sendMedia(array $item): void
+    {
+        $f = (string)($item['path'] ?? ''); $real = $f !== '' ? realpath($f) : false; $root = realpath((string)($this->cfg['media_dir'] ?? ''));
+        if ($real && $root && str_starts_with($real, $root . DIRECTORY_SEPARATOR) && is_file($real)) {
+            header('Content-Type: ' . $item['mime_type']);
+            header('Content-Length: ' . filesize($real));
+            header('X-Content-Type-Options: nosniff');
+            header("Content-Security-Policy: default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox");
+            header('Cache-Control: ' . (str_contains((string)($_SERVER['REQUEST_URI'] ?? ''), '/public/') ? 'public, max-age=86400' : 'private, max-age=300'));
+            readfile($real); return;
+        }
+        header('Location: ' . $item['url'], true, 302);
     }
 
     // ───────────────────────── Digi-ID ─────────────────────────
@@ -544,7 +563,7 @@ final class Api
         if ($id === null && $m === 'POST') { $this->upload(); return; }
         $item = $id ? $this->pod->one('SELECT * FROM _media WHERE id = ?', [$id]) : null;
         if (!$item) { $this->json(['error' => 'Not found'], 404); return; }
-        if (($seg[1] ?? '') === 'raw') { if (Image::wanted() && Image::serve($item, rtrim($this->cfg['data_dir'], '/') . '/cache/media')) return; header('Location: ' . $item['url'], true, 302); return; }
+        if (($seg[1] ?? '') === 'raw') { if (Image::wanted() && Image::serve($item, rtrim($this->cfg['data_dir'], '/') . '/cache/media')) return; $this->sendMedia($item); return; }
         if ($m === 'PUT') {
             $b = $this->body();
             if (array_key_exists('alt', $b)) $this->pod->run('UPDATE _media SET alt = ? WHERE id = ?', [$b['alt'] === null ? null : mb_substr((string)$b['alt'], 0, 500), $id]);
@@ -847,7 +866,7 @@ final class Api
             $m = $pod->one("SELECT * FROM _media WHERE id = ? AND mime_type LIKE 'image/%'", [$slug]);
             if (!$m) { $this->json(['error' => 'Not found'], 404); return; }
             if (Image::wanted() && Image::serve($m, rtrim($this->cfg['data_dir'], '/') . '/cache/media')) return;
-            header('Location: ' . $m['url'], true, 302); return;
+            $this->sendMedia($m); return;
         }
         $c = $col ? $pod->collection($col) : null;
         if (!$c) { $this->json(['error' => 'Not found'], 404); return; }

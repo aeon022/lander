@@ -70,3 +70,7 @@
 
 ## 2026-11-16 — Fix Konto-Seite (0.5.1)
 - `router.js` tauschte `account.html` im SPA-Modus nur als `.main` aus: das Modul-Skript und die klassischen Skripte (`qrcode.js`, `digiid.js`) liefen nicht → 2FA-Karte blieb „Loading…", Digi-ID-Knopf tot, bis ein Hard-Refresh kam. Seite jetzt von der SPA-Navigation ausgenommen (wie users/forms). In Puppeteer reproduziert und behoben.
+
+## 2026-11-16 — Medien-Vorschaubilder (0.5.2)
+- Melder: im Admin keine Vorschaubilder in der Medienübersicht (Pinas Testserver). `/api/media/:id/raw` und `/api/public/media/:id` leiteten per 302 auf die statische URL (`/lander/media/x.jpg`) um; auf Hosts, bei denen nginx statische Dateien selbst ausliefert (Plesk) oder im Unterordner, erreicht die Anfrage `public/media` nie (404). Lokal (Apache, Wurzel und Unterordner) nicht reproduzierbar, Ursache am echten Server **nicht** bestätigt.
+- Fix: `Api::sendMedia` liefert die Datei selbst aus (Pfad geprüft gegen `media_dir`, `nosniff`, CSP-sandbox, Cache), Redirect nur noch, wenn die Datei nicht auf der Platte liegt. Getestet im Docker: raw/public 200 mit Bild, Medienseite zeigt Vorschau.
