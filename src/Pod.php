@@ -18,6 +18,8 @@ final class Pod
         ]);
         $this->db->exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 3000;');
         $this->bootstrap();
+        // the pod holds users and settings: owner only (a web server that ignores data/.htaccess then cannot serve it)
+        if (is_file($path) && (fileperms($path) & 0077)) @chmod($path, 0600);
     }
 
     private function bootstrap(): void

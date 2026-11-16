@@ -86,3 +86,6 @@
 
 ## 2026-11-16 — Autosave für alle Felder (0.5.5)
 - Bisher speicherten nur Titel und Text-Blöcke automatisch (2 s); Felder wie Knopf-Text, Datum, Schalter nur per Knopf. Jetzt delegierter `input`/`change`-Listener auf `#fields-card-body, #fields-source, .main-fields` → `scheduleAutosave()` (Status bleibt wie er ist: veröffentlichte Einträge gehen sofort live). Getestet in Orbiter (Puppeteer) und Lander (Docker, Singleton «hinweis»). Nicht abgedeckt: Bildfelder/Pickers (setzen Werte per Code ohne Ereignis).
+
+## 2026-11-16 — Audit: Dateirechte (0.5.6)
+- Pod (`Pod::__construct`), Backups (`Backup::snapshot`) und Update-Rollback-ZIP werden mit 0600 angelegt bzw. nachgezogen, Backup-Ordner 0700; Grund: ein Web-Server, der `data/.htaccess` ignoriert, soll sie nicht ausliefern können. `SECURITY.md` ergänzt, GitHub-Sicherheitsfunktionen aktiviert.

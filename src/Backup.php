@@ -24,6 +24,7 @@ final class Backup
         $c = new PDO('sqlite:' . $dest, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
         $c->exec('DELETE FROM _sessions');
         $c = null;
+        @chmod($dest, 0600); // password hashes and saved settings: owner only, even if a host ignores data/.htaccess
     }
 
     public static function download(array $cfg, Pod $pod, bool $withMedia): void
@@ -195,7 +196,7 @@ final class Backup
             $newest = 0;
             foreach (glob("$dir/auto-*.pod") ?: [] as $f) $newest = max($newest, (int)filemtime($f));
             if (time() - $newest < $days * 86400) return;
-            if (!is_dir($dir) && !mkdir($dir, 0750, true)) return;
+            if (!is_dir($dir) && !mkdir($dir, 0700, true)) return;
             self::make($cfg, $pod, false, "$dir/auto-" . gmdate('Y-m-d_His') . '.pod');
             self::rotate("$dir/auto-*.pod", (int)($cfg['auto_backup_keep'] ?? 8));
         } catch (Throwable $e) { error_log('[lander] auto backup: ' . $e->getMessage()); }

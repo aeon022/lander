@@ -85,7 +85,7 @@ final class Updater
                         if ($f->isFile() && !str_starts_with($rel2, 'public/media/')) $old->addFile($f->getPathname(), $rel2);
                     }
                 }
-                $old->close();
+                $old->close(); @chmod("$rb/code-$currentVersion.zip", 0600);
             }
 
             $count = 0;
