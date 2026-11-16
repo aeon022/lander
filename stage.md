@@ -94,3 +94,9 @@
 - `public/index.php` liefert Admin-Seiten (`/<name>.html` und Kurz-URL `/<name>`) selbst aus: Nonce an jedem `<script>`, `Content-Security-Policy` (wie Orbiter: `script-src 'nonce-…' 'strict-dynamic' 'self'`, kein `unsafe-inline` für Skripte, `frame-ancestors 'self'`), `X-Frame-Options: DENY`. `public/.htaccess` leitet `*.html` dorthin. Alle 81 Inline-Handler → `data-on-*` (Dispatcher aus `theme.js`, `orbH`-Helfer; `theme.js` auf Orbiter-Stand inkl. Skript-Ladung per `createElement`).
 - Getestet (Docker, PHP 8.3/Apache): Hauptordner und Unterordner `/lander`, Deutsch und Englisch: alle 11 Seiten ohne CSP-Verstoß/Seitenfehler, alle Handler-Funktionen vorhanden, alle Klick-Elemente (ohne Löschen) ausgelöst. Nicht einzeln durchgeklickt: jede Editor-Aktion (Tabellen, Video, KI) – wie bei Orbiter.
 - Achtung: Hosts ohne mod_rewrite/`.htaccess` (nur nginx) bedienen Lander ohnehin nicht (API-Routing).
+
+## 2026-11-16 — Dock: nicht mehr zu breit (0.6.1)
+- Melder: viele Sammlungen sprengten die Dock-Länge, lange Namen standen ungekürzt darunter (Tappauf: 10 Sammlungen). Gruppen gibt es schon (Einstellungen → Navigation), aber sie müssen von Hand angelegt werden und ordnen nach Thema, nicht nach Art; eine automatische Gruppe «Seiten/Listen» wurde deshalb wieder verworfen.
+- `xfce.js`: bleiben mehr als 6 Sammlungen ohne Gruppe, wandern die überzähligen in einen Auffang-Drawer «Mehr» (de: «Mehr»), so wird der Dock nie breiter als der Bildschirm. Dock-Namen kürzen auf den ersten Teil des Labels («Referenzen (Projekte)» → «Referenzen», «Auftraggeber & Partner» → «Auftraggeber»), der volle Name steht im Tooltip. Kein «…» mehr.
+- `style.css`: Dock `max-width: calc(100vw - 16px)`, Drawer-Popups scrollen ab 70 vh. `i18n-de.js`: «More» → «Mehr».
+- Getestet (Docker, Tappauf-Daten, 10 Sammlungen): mit Gruppen 13 statt 16 Dock-Einträge; ohne Gruppen 5 Sammlungen + «Mehr». Tappauf bekommt drei thematische Gruppen (Auftritt, Arbeit, Menschen) in seinem Pod.

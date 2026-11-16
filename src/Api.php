@@ -17,7 +17,7 @@ require_once __DIR__ . '/DigiId.php';
  */
 final class Api
 {
-    public const VERSION = '0.6.0';
+    public const VERSION = '0.6.1';
     private Pod $pod;
     private ?array $user = null;
     private const STATUSES = ['draft', 'in_review', 'published', 'scheduled'];
