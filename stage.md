@@ -79,3 +79,7 @@
 - Ursache der fehlenden Vorschaubilder auf Pinas Testserver (laut Nutzer): beim Hochladen des Update-Pakets wurde `public/media` ersetzt. Das Paket enthielt `public/media/.htaccess`, „Ersetzen" des Ordners löscht die bisherigen Uploads. Die Dateien sind dort weg (Pod-Zeilen bleiben), Wiederherstellung nur durch erneutes Hochladen.
 - Fix: `.htaccess` des Medienordners liegt jetzt als Vorlage in `src/media.htaccess`; `public/media/` ist nicht mehr im Repo/ZIP. `install.php`, jeder Upload (`Api::guardMedia`) und der Updater legen die Datei selbst an bzw. erneuern sie. Getestet: Ordner fehlt im Baum, Upload legt ihn samt `.htaccess` an, PHP-Datei dort → 403.
 - Pakete für Pina enthalten keinen `media`-Ordner mehr.
+
+## 2026-11-16 — Dock: Reihenfolge und kürzere Namen (0.5.4)
+- `nav.order` (JSON-Liste von Sammlungs-IDs) in Meta + `/api/info` (`nav.order`); `xfce.js` (`orbNavSort`) und `sidebar.js` sortieren danach, nicht genannte folgen in der alten Reihenfolge. Dock-Beschriftungen nutzen `ORB_DE_DOCK` (kürzere deutsche Wörter).
+- Pina: Reihenfolge Hinweise, Urlaub, Termine, Blog über `PUT /api/meta` gesetzt.

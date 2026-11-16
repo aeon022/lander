@@ -17,7 +17,7 @@ require_once __DIR__ . '/DigiId.php';
  */
 final class Api
 {
-    public const VERSION = '0.5.3';
+    public const VERSION = '0.5.4';
     private Pod $pod;
     private ?array $user = null;
     private const STATUSES = ['draft', 'in_review', 'published', 'scheduled'];
@@ -26,7 +26,7 @@ final class Api
         'media.img_max_width', 'media.img_quality', 'media.img_convert_webp',
         'dashboard.notes', 'dashboard.todos', 'dashboard.show_calendar', 'dashboard.show_recent',
         'dashboard.show_collections', 'dashboard.show_workspace', 'ui.theme', 'workflow.review',
-        'format_version', 'nav.hidden', 'nav.groups', 'build.webhook_url',
+        'format_version', 'nav.hidden', 'nav.groups', 'nav.order', 'build.webhook_url',
     ];
     private const MEDIA_TYPES = [
         'image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif', 'image/avif' => 'avif',
@@ -376,7 +376,7 @@ final class Api
             'formatVersion' => $this->pod->getMeta('format_version') ?? '1',
             'adminVersion' => 'Lander ' . self::VERSION . ' · UI from Orbiter 0.3.96',
             'collections' => $cols,
-            'nav' => ['hidden' => array_values(array_filter(array_map('trim', explode(',', $hidden)))), 'groups' => json_decode($this->pod->getMeta('nav.groups') ?? 'null', true)],
+            'nav' => ['hidden' => array_values(array_filter(array_map('trim', explode(',', $hidden)))), 'groups' => json_decode($this->pod->getMeta('nav.groups') ?? 'null', true), 'order' => array_values(array_filter((array)json_decode($this->pod->getMeta('nav.order') ?: '[]', true), 'is_string'))],
         ]);
     }
 
