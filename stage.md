@@ -57,3 +57,8 @@
 - `src/Totp.php` (RFC 6238, Format wie Orbiter, Secrets/Recovery-Codes kompatibel), `Api::secondFactor` beim Login (Code oder Recovery-Code, Replay-Schutz über `totp_last`, 10 Versuche/15 min pro Konto zusätzlich zum IP-Limit), `Api::twoFactor` = GET/POST `/api/account/2fa[/setup|enable|disable]` wie Orbiter. Vorher wurde Login für Konten mit 2FA komplett verweigert (jetzt möglich, auch nach Umzug eines Orbiter-Pods).
 - `scripts/totp-selftest.php` (RFC-Vektoren). Getestet im Docker: Setup, falscher/richtiger Code, Login ohne/mit falschem Code, Replay (abgewiesen), nächster Zeitschritt, Recovery-Code einmalig, Rest-Anzeige. Nicht getestet: Disable, Authenticator-App am Handy.
 - Secret liegt unverschlüsselt im Pod (Orbiter kann at-rest verschlüsseln, Lander noch nicht).
+
+## 2026-11-16 — Webhooks und Build-Trigger (0.4.0)
+- `src/Webhooks.php`: `build.webhook_url` (Meta, admin-only, nur http/https) wird bei „publish" per POST gerufen; signierte Hooks (`_meta webhooks.urls`, Events publish/delete/review/*, HMAC-SHA256 `X-Orbiter-Signature`, Log der letzten 50). `Api::webhooks` = GET/POST/DELETE/test wie Orbiter. Versand nach der Antwort (`register_shutdown_function` + `fastcgi_finish_request`), 1 Versuch, kein Retry (ponytail-Kommentar).
+- Ausgelöst bei: Anlegen mit Status published, Draft→published, Bulk publish/delete, Löschen.
+- Getestet (Docker): Hook + Build-URL feuern bei publish (Einzel + Bulk), Entwurf feuert nicht, Test-Ping, ungültige URLs (javascript:, file:) abgewiesen, Signatur-Header vorhanden. Nicht getestet: Signatur gegen Empfänger-Code geprüft, Hosts ohne curl, `review`-Event (Lander hat keinen Review-Ablauf).

@@ -7,6 +7,7 @@ require_once __DIR__ . '/Rebase.php';
 require_once __DIR__ . '/Image.php';
 require_once __DIR__ . '/Updater.php';
 require_once __DIR__ . '/Totp.php';
+require_once __DIR__ . '/Webhooks.php';
 
 /**
  * Lander API: the subset of Orbiter's admin API (packages/admin/src/routes) the Station UI needs,
@@ -15,7 +16,7 @@ require_once __DIR__ . '/Totp.php';
  */
 final class Api
 {
-    public const VERSION = '0.3.3';
+    public const VERSION = '0.4.0';
     private Pod $pod;
     private ?array $user = null;
     private const STATUSES = ['draft', 'in_review', 'published', 'scheduled'];
@@ -24,7 +25,7 @@ final class Api
         'media.img_max_width', 'media.img_quality', 'media.img_convert_webp',
         'dashboard.notes', 'dashboard.todos', 'dashboard.show_calendar', 'dashboard.show_recent',
         'dashboard.show_collections', 'dashboard.show_workspace', 'ui.theme', 'workflow.review',
-        'format_version', 'nav.hidden', 'nav.groups',
+        'format_version', 'nav.hidden', 'nav.groups', 'build.webhook_url',
     ];
     private const MEDIA_TYPES = [
         'image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif', 'image/avif' => 'avif',
@@ -93,7 +94,7 @@ final class Api
             $r === 'account' && ($seg[1] ?? '') === 'sessions' => $this->sessions($m, $seg[2] ?? null),
             $r === 'account' && ($seg[1] ?? '') === '2fa' => $this->twoFactor($m, $seg[2] ?? ''),
             $r === 'api-keys' => $this->json(['keys' => []]),
-            $r === 'webhooks' => $this->json(['hooks' => [], 'log' => []]),
+            $r === 'webhooks' => $this->webhooks($m, array_slice($seg, 1)),
             $r === 'templates' => $this->json([]),
             $r === 'search' && ($seg[1] ?? '') === 'recent' => $this->recent(),
             $r === 'search' && ($seg[1] ?? '') === 'calendar' => $this->json([]),
@@ -131,6 +132,30 @@ final class Api
         if (password_needs_rehash($u['password'], PASSWORD_DEFAULT)) $this->pod->run('UPDATE _users SET password = ? WHERE id = ?', [password_hash($pass, PASSWORD_DEFAULT), $u['id']]);
         setcookie('orb_sess', $token, ['expires' => time() + 30 * 86400, 'path' => $this->cookiePath(), 'httponly' => true, 'samesite' => 'Strict', 'secure' => $this->https()]);
         $this->json(['ok' => true, 'user' => ['id' => $u['id'], 'username' => $u['username'], 'role' => $u['role']]]);
+    }
+
+    /** GET/POST /api/webhooks, DELETE /:id, POST /:id/test (admin; secrets are shown once, never listed). */
+    private function webhooks(string $m, array $seg): void
+    {
+        if (!$this->isAdmin()) { $this->json(['error' => 'Admins only'], 403); return; }
+        $pub = fn($h) => ['id' => $h['id'], 'url' => $h['url'], 'events' => $h['events'] ?? ['*'], 'signed' => !empty($h['secret'])];
+        $hooks = Webhooks::hooks($this->pod);
+        if (!$seg && $m === 'GET') { $this->json(['hooks' => array_map($pub, $hooks), 'log' => Webhooks::log($this->pod)]); return; }
+        if (!$seg && $m === 'POST') {
+            $b = $this->body(); $url = Webhooks::validUrl((string)($b['url'] ?? ''));
+            if (!$url) { $this->json(['error' => 'Only http(s) URLs are allowed'], 400); return; }
+            $ev = array_values(array_intersect((array)($b['events'] ?? []), ['publish', 'delete', 'review', '*']));
+            $h = ['id' => 'wh_' . bin2hex(random_bytes(5)), 'url' => $url, 'events' => $ev ?: ['*'], 'secret' => 'whsec_' . rtrim(strtr(base64_encode(random_bytes(24)), '+/', '-_'), '=')];
+            Webhooks::save($this->pod, [...$hooks, $h]);
+            $this->json($pub($h) + ['secret' => $h['secret']], 201); return;
+        }
+        $id = $seg[0];
+        if (count($seg) === 1 && $m === 'DELETE') { Webhooks::save($this->pod, array_filter($hooks, fn($h) => $h['id'] !== $id)); $this->json(['ok' => true]); return; }
+        if (($seg[1] ?? '') === 'test' && $m === 'POST') {
+            foreach ($hooks as $h) if ($h['id'] === $id) { $e = Webhooks::deliver($this->pod, $h, 'ping', ['message' => 'Test delivery from Lander']); $this->json(['ok' => $e['ok'], 'status' => $e['status'], 'error' => $e['error']]); return; }
+            $this->json(['error' => 'Not found'], 404); return;
+        }
+        $this->json(['error' => 'Not found'], 404);
     }
 
     /** Checks the TOTP code (or a recovery code) at login. Answers the request itself when it fails. */
@@ -257,13 +282,14 @@ final class Api
     private function metaAllowed(string $k): bool { return in_array($k, self::META_KEYS, true) || preg_match('/^(preview_url|templates)\.[a-z0-9_-]+$/', $k) === 1; }
     private function metaAll(): void { $o = []; foreach (self::META_KEYS as $k) $o[$k] = $this->pod->getMeta($k); $this->json($o); }
     private function metaGet(string $k): void { $k = str_replace('~', '.', $k); $this->metaAllowed($k) ? $this->json(['key' => $k, 'value' => $this->pod->getMeta($k)]) : $this->json(['error' => 'Key not allowed'], 403); }
-    private const META_ADMIN_ONLY = ['site.url', 'workflow.review', 'format_version'];
+    private const META_ADMIN_ONLY = ['site.url', 'workflow.review', 'format_version', 'build.webhook_url'];
     /** Non-admins must not change site-wide settings; preview URLs are admin-only and may only be http(s) or site-relative (they end up in an <a href>). */
     private function metaWritable(string $k, mixed $v): bool
     {
         $preview = str_starts_with($k, 'preview_url.');
         if (!$this->isAdmin() && ($preview || in_array($k, self::META_ADMIN_ONLY, true))) return false;
         if ($preview && $v !== null && $v !== '' && !preg_match('#^(https?://|/(?!/))#i', trim((string)$v))) return false;
+        if ($k === 'build.webhook_url' && $v !== null && $v !== '' && !Webhooks::validUrl(trim((string)$v))) return false;
         return true;
     }
     private function metaPut(): void { foreach ($this->body() as $k => $v) if ($this->metaAllowed((string)$k) && $this->metaWritable((string)$k, $v)) $this->pod->setMeta((string)$k, $v === null ? '' : (string)$v); $this->json(['ok' => true]); }
@@ -347,6 +373,7 @@ final class Api
             if ($this->pod->entry($col, $s, $lc)) { $this->json(['error' => "Entry \"$s\" already exists"], 409); return; }
             $id = $this->pod->createEntry($col, $s, (array)($b['data'] ?? []), $st, $lc);
             $this->pod->audit($id, $who, 'create');
+            if ($st === 'published') Webhooks::fire($this->pod, 'publish', ['collection' => $col, 'slug' => $s]);
             $this->json($this->pod->entry($col, $s, $lc), 201); return;
         }
         if ($slug === 'reorder' && $m === 'PATCH') {
@@ -363,7 +390,9 @@ final class Api
             $before = $this->pod->entry($col, $slug, $lc);
             if (!$this->pod->updateEntry($col, $slug, $b + ['locale' => $lc])) { $this->json(['error' => 'Not found'], 404); return; }
             $after = $this->pod->entry($col, $b['slug'] ?? $slug, $lc);
-            $this->pod->audit($after['id'], $who, ($b['status'] ?? null) === 'published' && ($before['status'] ?? '') !== 'published' ? 'publish' : 'update');
+            $pub = ($b['status'] ?? null) === 'published' && ($before['status'] ?? '') !== 'published';
+            $this->pod->audit($after['id'], $who, $pub ? 'publish' : 'update');
+            if ($pub) Webhooks::fire($this->pod, 'publish', ['collection' => $col, 'slug' => $after['slug']]);
             $this->json($after); return;
         }
         if ($sub === null && $m === 'DELETE') {
@@ -371,6 +400,7 @@ final class Api
             if (!$e) { $this->json(['error' => 'Not found'], 404); return; }
             $this->pod->run('UPDATE _entries SET deleted_at = ? WHERE id = ?', [Pod::now(), $e['id']]);
             $this->pod->audit($e['id'], $who, 'delete');
+            Webhooks::fire($this->pod, 'delete', ['collection' => $col, 'slug' => $slug]);
             $this->json(['ok' => true]); return;
         }
         if ($sub === 'restore' && $m === 'POST') {
@@ -421,6 +451,8 @@ final class Api
                 default => null,
             };
         }
+        if ($a === 'publish') Webhooks::fire($this->pod, 'publish', ['collection' => $col, 'action' => 'publish', 'count' => count($slugs)]);
+        if ($a === 'delete') Webhooks::fire($this->pod, 'delete', ['collection' => $col, 'action' => 'delete', 'count' => count($slugs)]);
         $this->json(['ok' => true, 'count' => count($slugs)]);
     }
 
