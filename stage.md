@@ -83,3 +83,6 @@
 ## 2026-11-16 — Dock: Reihenfolge und kürzere Namen (0.5.4)
 - `nav.order` (JSON-Liste von Sammlungs-IDs) in Meta + `/api/info` (`nav.order`); `xfce.js` (`orbNavSort`) und `sidebar.js` sortieren danach, nicht genannte folgen in der alten Reihenfolge. Dock-Beschriftungen nutzen `ORB_DE_DOCK` (kürzere deutsche Wörter).
 - Pina: Reihenfolge Hinweise, Urlaub, Termine, Blog über `PUT /api/meta` gesetzt.
+
+## 2026-11-16 — Autosave für alle Felder (0.5.5)
+- Bisher speicherten nur Titel und Text-Blöcke automatisch (2 s); Felder wie Knopf-Text, Datum, Schalter nur per Knopf. Jetzt delegierter `input`/`change`-Listener auf `#fields-card-body, #fields-source, .main-fields` → `scheduleAutosave()` (Status bleibt wie er ist: veröffentlichte Einträge gehen sofort live). Getestet in Orbiter (Puppeteer) und Lander (Docker, Singleton «hinweis»). Nicht abgedeckt: Bildfelder/Pickers (setzen Werte per Code ohne Ereignis).
