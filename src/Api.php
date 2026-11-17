@@ -31,6 +31,10 @@ final class Api
     private const MEDIA_TYPES = [
         'image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif', 'image/avif' => 'avif',
         'application/pdf' => 'pdf',
+        // music and video for artists' sites (finfo names the same format differently depending on the file)
+        'audio/mpeg' => 'mp3', 'audio/mp4' => 'm4a', 'audio/x-m4a' => 'm4a', 'audio/aac' => 'aac', 'audio/ogg' => 'ogg', 'application/ogg' => 'ogg',
+        'audio/wav' => 'wav', 'audio/x-wav' => 'wav', 'audio/flac' => 'flac', 'audio/x-flac' => 'flac',
+        'video/mp4' => 'mp4', 'video/webm' => 'webm', 'video/quicktime' => 'mov',
     ];
 
     public function __construct(private array $cfg) {}
@@ -173,10 +177,21 @@ final class Api
         $f = (string)($item['path'] ?? ''); $real = $f !== '' ? realpath($f) : false; $root = realpath((string)($this->cfg['media_dir'] ?? ''));
         if ($real && $root && str_starts_with($real, $root . DIRECTORY_SEPARATOR) && is_file($real)) {
             header('Content-Type: ' . $item['mime_type']);
-            header('Content-Length: ' . filesize($real));
             header('X-Content-Type-Options: nosniff');
             header("Content-Security-Policy: default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox");
             header('Cache-Control: ' . (str_contains((string)($_SERVER['REQUEST_URI'] ?? ''), '/public/') ? 'public, max-age=86400' : 'private, max-age=300'));
+            // Range requests: Safari on iPhone/iPad only plays audio and video from servers that answer them, and seeking needs them
+            $size = filesize($real);
+            if (preg_match('/^bytes=(\d*)-(\d*)$/', (string)($_SERVER['HTTP_RANGE'] ?? ''), $m) && ($m[1] !== '' || $m[2] !== '')) {
+                $from = $m[1] === '' ? max(0, $size - (int)$m[2]) : (int)$m[1];
+                $to = ($m[1] === '' || $m[2] === '') ? $size - 1 : min((int)$m[2], $size - 1);
+                if ($from > $to || $from >= $size) { http_response_code(416); header("Content-Range: bytes */$size"); return; }
+                http_response_code(206); header("Content-Range: bytes $from-$to/$size"); header('Accept-Ranges: bytes'); header('Content-Length: ' . ($to - $from + 1));
+                $fh = fopen($real, 'rb'); fseek($fh, $from); $left = $to - $from + 1;
+                while ($left > 0 && !feof($fh)) { $chunk = fread($fh, min(65536, $left)); echo $chunk; $left -= strlen($chunk); }
+                fclose($fh); return;
+            }
+            header('Accept-Ranges: bytes'); header('Content-Length: ' . $size);
             readfile($real); return;
         }
         header('Location: ' . $item['url'], true, 302);
@@ -591,7 +606,7 @@ final class Api
         if (!$f || ($f['error'] ?? 1) !== UPLOAD_ERR_OK) { $this->json(['error' => 'No file provided'], 400); return; }
         if ($f['size'] > ($this->cfg['max_upload_mb'] ?? 12) * 1048576) { $this->json(['error' => 'File too large'], 413); return; }
         $type = (new finfo(FILEINFO_MIME_TYPE))->file($f['tmp_name']) ?: '';   // real type, not the browser's claim
-        if (!isset(self::MEDIA_TYPES[$type])) { $this->json(['error' => 'File type not allowed (JPG, PNG, WebP, GIF, AVIF, PDF)'], 415); return; }
+        if (!isset(self::MEDIA_TYPES[$type])) { $this->json(['error' => 'File type not allowed (images, PDF, audio: MP3 M4A WAV OGG FLAC, video: MP4 WebM MOV)'], 415); return; }
 
         $folder = trim(preg_replace('/[^a-z0-9_\/-]/', '', strtolower((string)($_POST['folder'] ?? ''))), '/');
         $folder = implode('/', array_filter(explode('/', $folder), fn($p) => $p !== '' && $p !== '..'));
@@ -894,7 +909,7 @@ final class Api
         $out = function (array $e) use ($mediaKeys, $resolve) {
             $d = $e['data'];
             foreach ($mediaKeys as $k) if (array_key_exists($k, $d)) $d[$k] = $resolve($d[$k]);
-            return ['slug' => $e['slug'], 'locale' => $e['locale'], 'data' => $d ?: new stdClass(), 'updated_at' => $e['updated_at'], 'publish_at' => $e['publish_at']];
+            return ['id' => $e['id'], 'slug' => $e['slug'], 'locale' => $e['locale'], 'data' => $d ?: new stdClass(), 'updated_at' => $e['updated_at'], 'publish_at' => $e['publish_at']];
         };
         $ttl = max(0, (int)($this->cfg['public_cache_seconds'] ?? 10));   // how long browsers/proxies may reuse an answer; edits show up after at most this long
         header($ttl > 0 ? "Cache-Control: public, max-age=$ttl, stale-while-revalidate=" . ($ttl * 3) : 'Cache-Control: no-cache');

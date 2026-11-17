@@ -1300,7 +1300,7 @@
       // Wire up media drop zones
       panel.querySelectorAll('.media-drop-zone').forEach(zone=>{
         const key = zone.id.replace('media-drop-','');
-        zone.addEventListener('click',()=>{ const fi=document.createElement('input');fi.type='file';fi.accept='image/*,video/*,application/pdf';fi.onchange=()=>uploadMediaField(key,fi);fi.click(); });
+        zone.addEventListener('click',()=>{ const fi=document.createElement('input');fi.type='file';fi.accept='image/*,video/*,audio/*,application/pdf';fi.onchange=()=>uploadMediaField(key,fi);fi.click(); });
         zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag-over');});
         zone.addEventListener('dragleave',()=>zone.classList.remove('drag-over'));
         zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('drag-over');if(e.dataTransfer.files.length){const fi={files:e.dataTransfer.files};uploadMediaField(key,fi);}});

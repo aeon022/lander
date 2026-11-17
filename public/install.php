@@ -46,7 +46,7 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && $ok) {
             @copy($root . '/src/media.htaccess', $media . '/.htaccess');
             $cfg = "<?php\n// Created by install.php\nreturn " . var_export([
                 'pod' => $root . '/data/content.pod', 'data_dir' => $root . '/data', 'media_dir' => $media,
-                'media_url' => $base . '/media', 'base_path' => $base, 'max_upload_mb' => 12, 'max_restore_mb' => 100,
+                'media_url' => $base . '/media', 'base_path' => $base, 'max_upload_mb' => 40, 'max_restore_mb' => 100,
                 'auto_backup_days' => 7, 'auto_backup_keep' => 8, 'public_cache_seconds' => 10,
                 'form_token' => bin2hex(random_bytes(24)),
                 'public_origins' => array_values(array_unique(array_merge($origins, ['http://127.0.0.1:4321', 'http://localhost:4321']))),
