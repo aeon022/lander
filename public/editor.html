@@ -1010,7 +1010,7 @@
         } else if (field.type==='date') {
           fieldsHtml += `<input type="date" class="field-input" name="${key}" value="${escHtml(val??'')}" />`;
         } else if (field.type==='select') {
-          fieldsHtml += `<select class="field-select" name="${key}">${(field.options??[]).map(o=>`<option value="${escHtml(o)}"${val===o?' selected':''}>${escHtml(o)}</option>`).join('')}</select>`;
+          fieldsHtml += `<select class="field-select" name="${key}">${field.required ? '' : `<option value=""${val ? '' : ' selected'}>—</option>`}${(field.options??[]).map(o=>`<option value="${escHtml(o)}"${val===o?' selected':''}>${escHtml(o)}</option>`).join('')}</select>`;
         } else if (field.type==='weekdays') {
           const active = Array.isArray(val) ? val : [];
           fieldsHtml += `<div class="weekday-grid" id="wd-grid-${key}">

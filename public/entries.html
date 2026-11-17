@@ -625,10 +625,11 @@
     });
 
     document.getElementById('modal-create').addEventListener('click', async () => {
-      const slug  = document.getElementById('new-slug').value.trim();
+      const typed = document.getElementById('new-slug').value.trim();
+      let slug = typed.toLowerCase();   // the server lowercases slugs; the editor link must use the saved one
       const title = document.getElementById('new-title').value.trim();
       const errEl = document.getElementById('modal-error');
-      if (!slug) { errEl.textContent = 'Slug is required'; errEl.style.display = 'block'; return; }
+      if (!typed) { errEl.textContent = 'Slug is required'; errEl.style.display = 'block'; return; }
       errEl.style.display = 'none';
 
       const entryData = _activeTpl ? { ..._activeTpl.data, title } : { title };
@@ -638,6 +639,7 @@
         body: JSON.stringify({ slug, data: entryData, status: 'draft', locale: activeLocale }),
       });
       if (res.ok) {
+        slug = (await res.json().catch(() => null))?.slug || slug;   // slug as the server saved it
         overlay.style.display = 'none';
         const localeParam = activeLocale ? `&locale=${encodeURIComponent(activeLocale)}` : '';
         location.href = `/editor.html?collection=${colId}&slug=${slug}${localeParam}`;
