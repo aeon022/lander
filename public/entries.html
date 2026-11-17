@@ -257,6 +257,8 @@
     }
 
     window.openNew = () => document.getElementById('new-btn')?.click();
+    // open a page through the router when there is one (the editor then opens without a reload), else a normal navigation
+    const goTo = (u) => (window.__orbGo ? window.__orbGo(u) : (location.href = u));
 
     // ── Phone: "⋯" sheet and swipe on a row (left: actions, right: publish/unpublish after asking) ──
     function openRowSheet(tr) {
@@ -267,7 +269,7 @@
       sh.innerHTML = '<div class="orb-sheet-title"></div>';
       sh.firstChild.textContent = title;
       const add = (label, fn, danger) => { const b = document.createElement('button'); b.className = 'orb-sheet-item' + (danger ? ' danger' : ''); b.textContent = label; b.addEventListener('click', () => { bd.remove(); fn(); }); sh.appendChild(b); };
-      add('Edit', () => { location.href = tr.dataset.edit || tr.querySelector('.row-edit')?.getAttribute('href') || location.href; });
+      add('Edit', () => { goTo(tr.dataset.edit || tr.querySelector('.row-edit')?.getAttribute('href') || location.href); });
       const tg = tr.querySelector('.status-toggle'); if (tg) add(tg.textContent.trim(), () => tg.click());
       add('Duplicate', () => tr.querySelector('.dup-btn')?.click());
       add('Trash', () => tr.querySelector('.delete-btn')?.click(), true);
@@ -278,7 +280,12 @@
     }
     (function () {
       const wrap = document.getElementById('entries-wrap'); if (!wrap) return;
-      wrap.addEventListener('click', ev => { const b = ev.target.closest('.more-btn'); if (b) { ev.stopPropagation(); openRowSheet(b.closest('tr')); } });
+      wrap.addEventListener('click', ev => {
+        const b = ev.target.closest('.more-btn'); if (b) { ev.stopPropagation(); openRowSheet(b.closest('tr')); return; }
+        // phone: a tap on the row (not on a button, link or checkbox) opens the entry
+        const tr = ev.target.closest('tr[data-edit]');
+        if (tr && !ev.target.closest('a,button,input,.drag-handle') && matchMedia('(max-width: 900px)').matches && activeFilter !== 'trash') goTo(tr.dataset.edit);
+      });
       let sx = 0, sy = 0, st = null;
       wrap.addEventListener('touchstart', ev => { const t = ev.touches[0]; sx = t.clientX; sy = t.clientY; st = ev.target.closest('tr[data-edit]'); if (ev.target.closest('input,button,a,.drag-handle')) st = null; }, { passive: true });
       wrap.addEventListener('touchend', ev => {
@@ -369,10 +376,6 @@
 
       // Select all
       document.getElementById('check-all').addEventListener('change', e => {
-        wrap.querySelectorAll('tbody tr[data-edit]').forEach(tr => tr.addEventListener('click', ev => {
-          if (ev.target.closest('a,button,input,.drag-handle') || !matchMedia('(max-width: 900px)').matches || activeFilter === 'trash') return;
-          location.href = tr.dataset.edit;
-        }));
         wrap.querySelectorAll('.row-cb').forEach(cb => {
           cb.checked = e.target.checked;
           if (e.target.checked) selected.add(cb.dataset.slug);
@@ -660,7 +663,7 @@
       if (menu.style.display === 'none' || !menu.style.display) openTplMenu();
       else menu.style.display = 'none';
     });
-    document.addEventListener('click', () => { document.getElementById('tpl-menu').style.display = 'none'; });
+    document.addEventListener('click', () => { const m = document.getElementById('tpl-menu'); if (m) m.style.display = 'none'; });
 
     // small "pick a date" dialog (also works with the phone's own date picker)
     function askDate(what, label) {
@@ -751,7 +754,7 @@
         slug = (await res.json().catch(() => null))?.slug || slug;   // slug as the server saved it
         overlay.style.display = 'none';
         const localeParam = activeLocale ? `&locale=${encodeURIComponent(activeLocale)}` : '';
-        location.href = `/editor.html?collection=${colId}&slug=${slug}${localeParam}`;
+        goTo(`/editor.html?collection=${colId}&slug=${slug}${localeParam}`);
       } else {
         const d = await res.json();
         errEl.textContent = d.error ?? 'Could not create entry';

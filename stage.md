@@ -123,3 +123,10 @@
 - 0.7.1 Dock mit Beschriftung und Schubladen am Handy; 0.7.2 einheitliche Einträge; 0.7.3 gleitende Pille, Entwurfs-Badges, Seitenwechsel ohne Neuladen, Dock-Cache, versionierte Dateien (`index.php` fügt `?v=` ein, `.htaccess` setzt «immutable» per `E=ORB_IMMUTABLE`), «Zuletzt besucht», Deutsch als Standard; 0.7.4 Schubladen wie Notizen/To-do.
 - Handy-Audit: Listen mit «⋯»-Sheet und Wischgesten, Touch-Ziele, Skeletons, Vorschau-Sheet, Ungespeichert-Punkt.
 - Live bei martin-burboeck.com ausgerollt (Ein-Klick-Update); die `.htaccess`-Regel greift dort (geprüft: `?v=` liefert `immutable`).
+
+
+## 2026-11-17 (abends) — Editor im Router (lokal, noch nicht veröffentlicht)
+- `router.js`: `enterEditor()` öffnet `/editor.html` **in place** (nur Station-Modus): Seite holen, Editor-`<style>` tauschen, `.app`-Inhalt und alle Nachbar-Elemente des Editors (Overlays, Picker, Datei-Inputs) einsetzen, `marked` nachladen, das Modul-Skript per Blob ausführen. Danach `editorMode = true`: **jeder Link, Zurück-Taste und Abmelden sind normale Navigationen** (sauberes Aufräumen der vielen Listener/Timer des Editors; `beforeunload` bei ungespeicherten Änderungen funktioniert).
+- `window.__orbGo(href)` für Seiten-Skripte (Liste: Zeile antippen, «Bearbeiten», neuer Eintrag).
+- **Fehler gefunden und behoben:** Tippen auf eine Zeile (Handy) öffnete den Eintrag nur nach «Alle auswählen» (Listener lag im falschen Block, seit 0.7.0). Jetzt ein delegierter Klick-Handler. In 0.7.3/0.7.4 live **noch fehlerhaft**; «⋯» → Bearbeiten und Swipe gehen.
+- Getestet (headless, Lander lokal und Orbiter-Admin): Desktop und Handy, Titel ändern, ⌘S speichert (Slug folgt dem Titel, wie bisher), Zurück-Taste, Dock-Klick aus dem Editor mit `beforeunload`-Dialog, keine Konsolenfehler. Nicht getestet: Bild-/Video-Picker, Wikilink-Picker, KI-Panel, Sperr-Hinweis mit zweitem Nutzer, echte Geräte.
