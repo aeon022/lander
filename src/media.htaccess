@@ -1,5 +1,5 @@
 # Uploads: never execute code, no directory listings
-Options -Indexes -ExecCGI
+Options -Indexes
 RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .php8 .phar
 RemoveType .php .phtml .phar
 <FilesMatch "\.(php|phtml|phar|php\d|cgi|pl|py|sh|htaccess)$">
