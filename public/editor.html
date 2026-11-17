@@ -1077,6 +1077,11 @@
             <input type="text" class="tag-input" name="${key}" id="arr-${key}" value="${escHtml(arrVal)}" placeholder="tag1, tag2, …" />
             <div class="tag-preview" id="tags-${key}"></div>
           </div>`;
+        } else if (field.type==='relation' && field.multiple===false) {
+          // one linked entry (e.g. the band of a concert): a plain drop-down, stored as that entry's id
+          const entries = relationEntries[field.collection] ?? [];
+          const cur = Array.isArray(val) ? val[0] : val;
+          fieldsHtml += `<select class="field-select" name="${key}" data-rel-single="1"><option value=""${cur ? '' : ' selected'}>—</option>${entries.map(e=>`<option value="${escHtml(e.id)}"${cur===e.id?' selected':''}>${escHtml(e.data?.title??e.data?.name??e.slug)}</option>`).join('')}</select>`;
         } else if (field.type==='relation') {
           const selected = Array.isArray(val) ? val : (val ? [val] : []);
           const entries  = relationEntries[field.collection] ?? [];
@@ -1705,6 +1710,8 @@
         } else if (field.type==='array'||field.type==='weekdays') {
           const raw = document.getElementById('wd-val-'+key)?.value || document.querySelector(`[name="${key}"]`)?.value || '';
           data[key] = raw ? raw.split(',').map(s=>s.trim()).filter(Boolean) : [];
+        } else if (field.type==='relation' && field.multiple===false) {
+          const v = document.querySelector(`[name="${key}"]`)?.value; if (v) data[key] = v;
         } else if (field.type==='relation') {
           data[key] = [...document.querySelectorAll(`[name="${key}"]:checked`)].map(cb=>cb.value);
         } else {
