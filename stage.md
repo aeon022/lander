@@ -108,3 +108,12 @@
 - 2026-11-17 Fehler beim Neuanlegen eines Eintrags: Wurde im Dialog ein Slug mit Großbuchstaben getippt (z. B. «Test-test»), speichert der Server ihn klein («test-test»), der Editor öffnete aber den getippten Slug → 404 bei jedem Speichern («Error»). Jetzt: Slug wird klein geschrieben und der vom Server gelieferte Slug für den Editor-Link benutzt (`entries.html`).
 - Optionale Auswahlfelder (select, nicht «required») haben jetzt eine leere Option «—»; vorher war immer der erste Wert gesetzt (neues Konzert bekam automatisch die erste Band) (`editor.html`).
 - 2026-11-17 Echter Webhost (IPAX, Apache): `public/media/.htaccess` mit `Options -Indexes -ExecCGI` ergab HTTP 500 für alle Medien (`-ExecCGI` ist dort per AllowOverride nicht erlaubt). Jetzt nur `Options -Indexes`; Ausführung von PHP bleibt durch RemoveHandler/RemoveType/FilesMatch verhindert (`src/media.htaccess`).
+
+## 2026-11-17 — Für Künstler: Handy, iPad, Musik, Vorschau (0.7.0, nur lokal, Branch feat/artists, nicht veröffentlicht)
+- **Schnell anlegen:** Felder, die im Schema «In list» tragen, erscheinen direkt im Dialog «Neuer Eintrag» (Datum, Band, Ort …) plus Haken «gleich veröffentlichen»; der Slug entsteht aus Titel + Datum (eindeutig, auch wenn dieselbe Band an mehreren Tagen spielt).
+- **Handy/iPad:** Listen werden Karten (antippen = bearbeiten), Tab-Leiste mit Beschriftung, 16px-Felder (kein iOS-Zoom), Safe-Areas; installierbar als App (manifest.webmanifest, Icons, iOS-Meta in theme.js).
+- **Musik/Video:** Uploads MP3, M4A, WAV, OGG, FLAC, MP4, WebM, MOV (Upload-Limit für neue Installationen 40 MB); Range-Requests für Safari; Vorschau-Player in der Medienansicht.
+- **Verknüpfung:** `relation` mit `multiple:false` = eine Auswahl (Dropdown, speichert die Eintrags-ID); die öffentliche API liefert `id` je Eintrag; Listen zeigen den Titel der Verknüpfung.
+- **Kopieren mit neuem Datum** (Sammlungen mit Datumsfeld in der Liste), **Klartext-Fehler** statt «Error» beim Speichern, KI-Knöpfe ausgeblendet.
+- **Vorschau:** Knopf «Vorschau» im Editor, wenn `site.preview` (JSON: {"events": "/events/?vorschau={slug}"}) gesetzt ist; `site.url` = Adresse der Website. Die Website liest Entwürfe über die Admin-API (angemeldet, gleicher Ursprung).
+- **Redakteur-Rolle:** Dock ohne Nutzer/Schema/Build/Import …; der Server verweigert diese Aktionen ohnehin (403).

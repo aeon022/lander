@@ -1,3 +1,18 @@
+// Install as an app on phone and tablet (home-screen icon, full screen, safe areas on notched devices)
+(function () {
+  try {
+    var src = document.currentScript && document.currentScript.src; if (!src) return;
+    var base = src.replace(/theme\.js.*$/, ''), h = document.head;
+    var add = function (tag, attrs) { var e = document.createElement(tag); for (var k in attrs) e.setAttribute(k, attrs[k]); h.appendChild(e); };
+    add('link', { rel: 'manifest', href: base + 'manifest.webmanifest' });
+    add('link', { rel: 'apple-touch-icon', href: base + 'icon-180.png' });
+    add('meta', { name: 'apple-mobile-web-app-capable', content: 'yes' });
+    add('meta', { name: 'mobile-web-app-capable', content: 'yes' });
+    add('meta', { name: 'apple-mobile-web-app-title', content: 'Lander' });
+    add('meta', { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' });
+    var vp = document.querySelector('meta[name=viewport]'); if (vp && !/viewport-fit/.test(vp.content)) vp.content += ', viewport-fit=cover';
+  } catch (e) {}
+})();
 /**
  * Orbiter theme engine — runs inline in <head> before first paint.
  * Manages: palette (space/zen/catppuccin/amber/paper) × scheme (dark/light/auto).

@@ -84,7 +84,7 @@
 
       <!-- Upload -->
       <label class="upload-area" id="drop-zone">
-        <input type="file" id="file-input" accept="image/*,video/*,application/pdf" style="display:none" multiple />
+        <input type="file" id="file-input" accept="image/*,video/*,audio/*,application/pdf" style="display:none" multiple />
         <div class="upload-icon">↑</div>
         <div class="upload-label" id="upload-label">Drop files here or click to upload</div>
         <div class="upload-sub">Images, video, PDF</div>
@@ -215,10 +215,13 @@
       wrap.innerHTML = `<div class="media-grid">${items.map(m=>{
         const isImg  = m.mime_type.startsWith('image/');
         const isVid  = m.mime_type.startsWith('video/');
+        const isAud  = m.mime_type.startsWith('audio/');
         const thumb  = isImg
           ? `<img class="media-thumb" src="/api/media/${m.id}/raw" alt="${esc(m.alt??'')}" loading="lazy" />`
           : isVid
           ? `<video class="media-thumb" src="/api/media/${m.id}/raw" muted preload="metadata"></video>`
+          : isAud
+          ? `<div class="media-thumb-ph" style="flex-direction:column;gap:6px"><div class="media-thumb-icon">♪</div><audio controls preload="none" src="/api/media/${m.id}/raw" style="width:92%"></audio></div>`
           : `<div class="media-thumb-ph"><div class="media-thumb-icon">${m.mime_type==='application/pdf'?'⊠':'◫'}</div><div class="media-thumb-type">${m.mime_type.split('/')[1]?.toUpperCase()}</div></div>`;
         return `<div class="media-card" data-id="${m.id}">
           ${thumb}

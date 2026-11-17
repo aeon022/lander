@@ -13,7 +13,7 @@ window.ORB_DE = {
   'Close / exit': 'Schließen / Beenden', 'ESC to close': 'Esc zum Schließen', 'Esc': 'Esc', 'Cancel': 'Abbrechen', 'Save': 'Speichern', 'Delete': 'Löschen',
   'Edit': 'Bearbeiten', 'Create': 'Erstellen', 'Copy': 'Kopieren', 'Reset': 'Zurücksetzen', 'Apply': 'Anwenden', 'Retry': 'Erneut versuchen',
   'Remove': 'Entfernen', 'Insert': 'Einfügen', 'Test': 'Testen', 'Upload': 'Hochladen', 'Open →': 'Öffnen →', 'Next →': 'Weiter →', '← Prev': '← Zurück',
-  'Skip': 'Überspringen', 'Enabled': 'Aktiv', 'All': 'Alle', 'Today': 'Heute', 'Yes': 'Ja', 'No': 'Nein', 'Required': 'Pflichtfeld', 'In list': 'In Liste', 'Optional': 'Optional',
+  'Skip': 'Überspringen', 'Enabled': 'Aktiv', 'All': 'Alle', 'Today': 'Heute', 'Yes': 'Ja', 'No': 'Nein', 'Required': 'Pflichtfeld', 'Preview ↗': 'Vorschau ↗', 'Not saved: this entry no longer exists (deleted?). Back to the list.': 'Nicht gespeichert: Diesen Eintrag gibt es nicht mehr (gelöscht?). Zurück zur Liste.', 'Signed out. Please sign in again.': 'Abgemeldet. Bitte neu anmelden.', 'Not saved: too much content or file too large.': 'Nicht gespeichert: zu viel Inhalt oder Datei zu groß.', 'Not saved': 'Nicht gespeichert',  'Copy as a new entry': 'Als neuen Eintrag kopieren', 'Copy': 'Kopieren', 'Create and publish right away': 'Gleich anlegen und veröffentlichen', 'In list': 'In Liste', 'Optional': 'Optional',
   'Loading…': 'Lädt…', 'Saved': 'Gespeichert', '✓ Saved': '✓ Gespeichert', 'Deleted': 'Gelöscht', 'Could not save.': 'Konnte nicht gespeichert werden.',
   'Failed to load': 'Laden fehlgeschlagen', 'Upload failed': 'Upload fehlgeschlagen', 'Upload error': 'Upload-Fehler', 'Unlink': 'Verknüpfung lösen',
   'Details': 'Details', 'Actions': 'Aktionen', 'Status': 'Status', 'Title': 'Titel', 'Slug': 'Slug', 'Role': 'Rolle', 'Password': 'Passwort', 'Username': 'Benutzername',
@@ -119,6 +119,9 @@ window.ORB_DE = {
 };
 // text with variable parts: [regex, replacement]
 window.ORB_DE_RX = [
+  [/^Not saved: (.+)$/, (m, r) => 'Nicht gespeichert: ' + r],
+  [/^Not saved \(error (\d+)\)\. Reload the page and try again\.$/, (m, c) => 'Nicht gespeichert (Fehler ' + c + '). Seite neu laden und noch einmal versuchen.'],
+
   [/^(\d+) drafts?$/, '$1 Entwürfe'], [/^(\d+) pub$/, '$1 veröff.'], [/^(\d+) published$/, '$1 veröffentlicht'], [/^(\d+) published, (\d+) drafts?$/, '$1 veröffentlicht, $2 Entwürfe'],
   [/^(\d+) pub · (\d+) drafts?$/, '$1 veröff. · $2 Entwürfe'], [/^(\d+) users$/, '$1 Benutzer'], [/^(\d+) collections$/, '$1 Sammlungen'], [/^(\d+) assets$/, '$1 Dateien'],
   [/^(\d+) entries total$/, '$1 Einträge gesamt'], [/^(\d+) entr(?:y|ies)$/, '$1 Einträge'], [/^(\d+)% of total$/, '$1 % vom Ganzen'], [/^(\d+) filled$/, '$1 ausgefüllt'],

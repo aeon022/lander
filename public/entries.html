@@ -177,8 +177,15 @@
       .find(c => c.id === colId)?.schema ?? {};
     const listCols = Object.entries(colSchema).filter(([, f]) => f && f.list).map(([k, f]) => ({ key: k, label: f.label || k, type: f.type }));
     const dateCol = listCols.find(c => c.type === 'date' || c.type === 'datetime');
+    // relation columns show the linked entry's title, not its id
+    const relTitle = {};
+    for (const c of listCols.filter(c => c.type === 'relation')) {
+      const col = colSchema[c.key]?.collection;
+      if (col) for (const e of await fetch(`/api/collections/${col}/entries`, { credentials: 'include' }).then(r => r.ok ? r.json() : []).catch(() => [])) relTitle[e.id] = e.data?.title ?? e.data?.name ?? e.slug;
+    }
     const cellText = (c, v) => {
       if (v === undefined || v === null || v === '') return '—';
+      if (c.type === 'relation') return [].concat(v).map(id => relTitle[id] ?? id).join(', ') || '—';
       if (c.type === 'date' || c.type === 'datetime') return typeof window.orbDate === 'function' ? window.orbDate(String(v).slice(0, 10)) : String(v).slice(0, 10);
       if (c.type === 'boolean') return v ? '✓' : '—';
       if (Array.isArray(v)) return v.join(', ');
@@ -296,17 +303,17 @@
               const schedInfo   = e.status === 'scheduled' && e.publish_at ? ` · ${e.publish_at.split(' ')[0]}` : '';
               const localeParam = e.locale ? `&locale=${encodeURIComponent(e.locale)}` : '';
               const localeBadge = e.locale ? `<span style="font-family:var(--mono);font-size:9px;color:var(--muted);background:var(--bg3);border:1px solid var(--line);border-radius:4px;padding:1px 5px;margin-left:5px;vertical-align:middle">${e.locale}</span>` : '';
-              return `<tr data-slug="${orbEsc(e.slug)}" data-locale="${orbEsc(e.locale ?? '')}"${canSort ? ' draggable="true"' : ''}>
+              return `<tr data-slug="${orbEsc(e.slug)}" data-locale="${orbEsc(e.locale ?? '')}" data-edit="/editor.html?collection=${colId}&slug=${orbEsc(e.slug)}${localeParam}"${canSort ? ' draggable="true"' : ''}>
                 ${canSort ? `<td class="drag-col"><span class="drag-handle" title="Drag to reorder">⠿</span></td>` : ''}
                 <td class="cb-col"><input type="checkbox" class="row-cb" data-slug="${orbEsc(e.slug)}" data-locale="${orbEsc(e.locale ?? '')}" ${selected.has(e.slug) ? 'checked' : ''} /></td>
-                <td>
+                <td class="c-title">
                   <div style="color:var(--heading);font-weight:500">${escHtml(title)}${localeBadge}</div>
                   <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px">${escHtml(e.slug)}</div>
                 </td>
-                ${listCols.map(c => `<td style="font-size:12px;${c.type === 'date' || c.type === 'datetime' ? 'white-space:nowrap' : 'max-width:170px'}">${escHtml(cellText(c, e.data?.[c.key]))}</td>`).join('')}
-                <td>${isTrash ? `<span style="font-family:var(--mono);font-size:11px;color:var(--muted)">${deleted}</span>` : `<span class="badge badge-${e.status}">${String(e.status).replace(/_/g, ' ')}${schedInfo}</span>`}</td>
+                ${listCols.map(c => `<td class="c-list" data-label="${escHtml(c.label)}" style="font-size:12px;${c.type === 'date' || c.type === 'datetime' ? 'white-space:nowrap' : 'max-width:170px'}">${escHtml(cellText(c, e.data?.[c.key]))}</td>`).join('')}
+                <td class="c-status">${isTrash ? `<span style="font-family:var(--mono);font-size:11px;color:var(--muted)">${deleted}</span>` : `<span class="badge badge-${e.status}">${String(e.status).replace(/_/g, ' ')}${schedInfo}</span>`}</td>
                 ${isTrash || !listCols.length ? `<td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${isTrash ? '' : updated}</td>` : ''}
-                <td style="width:1%;white-space:nowrap">
+                <td class="c-act" style="width:1%;white-space:nowrap">
                   <div class="row-actions">
                     ${isTrash
                       ? `<button class="btn-row restore-btn" data-slug="${orbEsc(e.slug)}" data-locale="${orbEsc(e.locale ?? '')}">Restore</button>
@@ -325,6 +332,10 @@
 
       // Select all
       document.getElementById('check-all').addEventListener('change', e => {
+        wrap.querySelectorAll('tbody tr[data-edit]').forEach(tr => tr.addEventListener('click', ev => {
+          if (ev.target.closest('a,button,input,.drag-handle') || !matchMedia('(max-width: 900px)').matches || activeFilter === 'trash') return;
+          location.href = tr.dataset.edit;
+        }));
         wrap.querySelectorAll('.row-cb').forEach(cb => {
           cb.checked = e.target.checked;
           if (e.target.checked) selected.add(cb.dataset.slug);
@@ -400,13 +411,27 @@
       // Duplicate
       wrap.querySelectorAll('.dup-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
-          btn.disabled = true;
           const loc = btn.dataset.locale ?? '';
+          // a collection with a date (concerts): ask for the new date first, so a copy is a new appointment in two taps
+          let newDate = null;
+          if (dateCol) {
+            newDate = await askDate(`${btn.dataset.slug}`, dateCol.label);
+            if (newDate === null) return;
+          }
+          btn.disabled = true;
           const res = await fetch(`/api/collections/${colId}/entries/${btn.dataset.slug}/duplicate${loc ? '?locale=' + encodeURIComponent(loc) : ''}`, {
             method: 'POST', credentials: 'include',
           });
-          if (res.ok) loadEntries();
-          else btn.disabled = false;
+          if (!res.ok) { btn.disabled = false; return; }
+          if (newDate) {
+            const copy = await res.json();
+            const base = btn.dataset.slug.replace(/-kopie(-\d+)?$/, '').replace(/-\d{4}-\d{2}-\d{2}$/, '');
+            await fetch(`/api/collections/${colId}/entries/${copy.slug}${loc ? '?locale=' + encodeURIComponent(loc) : ''}`, {
+              method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ slug: `${base}-${newDate}`, data: { ...copy.data, [dateCol.key]: newDate }, status: 'draft' }),
+            });
+          }
+          loadEntries();
         });
       });
 
@@ -600,14 +625,58 @@
     });
     document.addEventListener('click', () => { document.getElementById('tpl-menu').style.display = 'none'; });
 
+    // small "pick a date" dialog (also works with the phone's own date picker)
+    function askDate(what, label) {
+      return new Promise(resolve => {
+        const ov = document.createElement('div');
+        ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;display:flex;align-items:center;justify-content:center';
+        ov.innerHTML = `<div style="background:var(--bg2);border:1px solid var(--line);border-radius:var(--radius);padding:28px 32px;width:400px;max-width:90vw"><h3 style="font-size:14px;color:var(--heading);margin-bottom:20px;font-weight:500">Copy as a new entry</h3>
+          <div class="field"><label class="label">${escHtml(label)}</label><input class="input" type="date" id="ask-date" /></div>
+          <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-ghost" id="ask-no">Cancel</button><button class="btn btn-primary" id="ask-ok">Copy</button></div></div>`;
+        document.body.appendChild(ov);
+        const done = v => { ov.remove(); resolve(v); };
+        ov.querySelector('#ask-no').onclick = () => done(null);
+        ov.querySelector('#ask-ok').onclick = () => { const v = ov.querySelector('#ask-date').value; if (v) done(v); else ov.querySelector('#ask-date').focus(); };
+        ov.querySelector('#ask-date').focus();
+      });
+    }
+
     function escHtml(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
     // New entry modal
     const overlay = document.getElementById('modal-overlay');
-    document.getElementById('new-btn').addEventListener('click', () => {
+    // Fields marked "In list" can be filled in right in the dialog (date, band, place …): a new concert takes seconds, also on a phone.
+    const quickFields = listCols;
+    const relOpts = {};
+    async function buildQuickFields() {
+      const box = document.getElementById('modal-fields'); box.innerHTML = '';
+      for (const c of quickFields) {
+        const f = colSchema[c.key] ?? {}; let input;
+        if (f.type === 'select') input = `<select class="input" data-qf="${c.key}"><option value="">—</option>${(f.options ?? []).map(o => `<option>${escHtml(o)}</option>`).join('')}</select>`;
+        else if (f.type === 'relation') {
+          relOpts[f.collection] ??= await fetch(`/api/collections/${f.collection}/entries`, { credentials: 'include' }).then(r => r.ok ? r.json() : []).catch(() => []);
+          input = `<select class="input" data-qf="${c.key}"><option value="">—</option>${relOpts[f.collection].map(e => `<option value="${escHtml(e.id)}">${escHtml(e.data?.title ?? e.data?.name ?? e.slug)}</option>`).join('')}</select>`;
+        } else if (f.type === 'date') input = `<input class="input" type="date" data-qf="${c.key}" />`;
+        else if (f.type === 'number') input = `<input class="input" type="number" data-qf="${c.key}" />`;
+        else if (f.type === 'boolean') input = `<input type="checkbox" data-qf="${c.key}" />`;
+        else input = `<input class="input" data-qf="${c.key}" ${f.type === 'url' ? 'type="url" placeholder="https://…"' : ''} />`;
+        box.insertAdjacentHTML('beforeend', `<div class="field"><label class="label">${escHtml(c.label)}</label>${input}</div>`);
+      }
+      const pr = document.getElementById('modal-publish-row'); pr.style.display = quickFields.length && canPublish ? 'flex' : 'none';
+      box.querySelectorAll('[data-qf]').forEach(el => el.addEventListener('input', autoSlug));
+    }
+    const slugify = (t) => t.toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-').replace(/^-|-$/g,'').slice(0,60);
+    function autoSlug() {   // title + date → a slug that stays unique when the same band plays on several days
+      const slug = document.getElementById('new-slug'); if (slug._touched) return;
+      const d = document.querySelector('#modal-fields input[type=date]')?.value || '';
+      slug.value = slugify(document.getElementById('new-title').value + (d ? '-' + d : ''));
+    }
+    document.getElementById('new-btn').addEventListener('click', async () => {
       _activeTpl = null;
+      document.getElementById('new-slug')._touched = false;
+      await buildQuickFields();
       overlay.style.display = 'flex';
-      document.getElementById('new-slug').focus();
+      document.getElementById('new-title').focus();
     });
     document.getElementById('modal-cancel').addEventListener('click', () => {
       overlay.style.display = 'none';
@@ -616,9 +685,7 @@
     // Auto-generate slug from title
     document.getElementById('new-title').addEventListener('input', e => {
       const slug = document.getElementById('new-slug');
-      if (!slug._touched) {
-        slug.value = e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 60);
-      }
+      if (!slug._touched) autoSlug();
     });
     document.getElementById('new-slug').addEventListener('input', e => {
       e.target._touched = e.target.value.length > 0;
@@ -633,10 +700,15 @@
       errEl.style.display = 'none';
 
       const entryData = _activeTpl ? { ..._activeTpl.data, title } : { title };
+      document.querySelectorAll('#modal-fields [data-qf]').forEach(el => {
+        const v = el.type === 'checkbox' ? el.checked : el.value;
+        if (v !== '' && v !== false) entryData[el.dataset.qf] = el.type === 'number' ? Number(v) : v;
+      });
+      const publishNow = document.getElementById('modal-publish')?.checked && canPublish;
       const res = await fetch(`/api/collections/${colId}/entries`, {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, data: entryData, status: 'draft', locale: activeLocale }),
+        body: JSON.stringify({ slug, data: entryData, status: publishNow ? 'published' : 'draft', locale: activeLocale }),
       });
       if (res.ok) {
         slug = (await res.json().catch(() => null))?.slug || slug;   // slug as the server saved it
@@ -665,6 +737,8 @@
         <label class="label" for="new-title">Title</label>
         <input class="input" id="new-title" placeholder="Entry title" />
       </div>
+      <div id="modal-fields"></div>
+      <label id="modal-publish-row" style="display:none;align-items:center;gap:8px;font-size:13px;margin:4px 0 12px"><input type="checkbox" id="modal-publish" /> <span>Create and publish right away</span></label>
       <div id="modal-error" style="color:var(--red);font-size:12px;margin-bottom:12px;display:none"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="btn btn-ghost" id="modal-cancel">Cancel</button>
