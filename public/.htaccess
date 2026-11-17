@@ -2,6 +2,8 @@
 Options -Indexes
 DirectoryIndex index.php
 RewriteEngine On
+RewriteCond %{QUERY_STRING} ^v=[0-9a-f]+$
+RewriteRule \.(js|css)$ - [E=ORB_IMMUTABLE:1,L]
 RewriteRule ^$ /login.html [R=302,L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^api/ index.php [L,QSA]
@@ -17,8 +19,10 @@ RewriteRule ^[a-z0-9-]+\.html$ index.php [L,QSA]
 </FilesMatch>
 <IfModule mod_headers.c>
   # Always revalidate the UI (ETag), otherwise old and new scripts mix after an update
+  # ...except versioned URLs (?v=…, set in index.php): they change with every file change, so they may stay cached
   <FilesMatch "\.(html|js|css)$">
-    Header always set Cache-Control "no-cache"
+    Header always set Cache-Control "no-cache" env=!ORB_IMMUTABLE
+    Header always set Cache-Control "public, max-age=31536000, immutable" env=ORB_IMMUTABLE
   </FilesMatch>
   Header always set X-Content-Type-Options "nosniff"
   Header always set X-Frame-Options "DENY"

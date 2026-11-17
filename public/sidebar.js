@@ -5,10 +5,10 @@
  */
 ;(function () {
   // Lander: Ausblend-Regeln für Funktionen ohne PHP-Gegenstück
-  var ls = document.createElement('script'); ls.src = '/lander.js'; document.head.appendChild(ls);
+  var ls = document.createElement('script'); ls.src = '/lander.js' + (window.__orbV || ''); document.head.appendChild(ls);
   if ((localStorage.getItem('orb_style') || 'xfce') === 'xfce') {  // Lander: Station-Modus als Standard
     var xs = document.createElement('script');
-    xs.src = '/xfce.js';
+    xs.src = '/xfce.js' + (window.__orbV || '');
     var cs = document.currentScript;
     if (cs && cs.parentNode) cs.parentNode.insertBefore(xs, cs.nextSibling);
     else document.head.appendChild(xs);

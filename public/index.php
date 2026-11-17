@@ -16,6 +16,10 @@ if (!str_starts_with($path, '/api/') && preg_match('~^/([a-z0-9-]+)(?:\.html)?$~
     $html = (string)file_get_contents(__DIR__ . "/{$pm[1]}.html");
     $nonce = base64_encode(random_bytes(16));
     $html = preg_replace('/<script\b(?![^>]*\bnonce=)/i', '<script nonce="' . $nonce . '"', $html);
+    // Versioned asset URLs (?v=…, changes whenever a js/css file changes): the browser can keep them for a year without asking again
+    $v = substr(md5(implode(',', array_map('filemtime', array_merge(glob(__DIR__ . '/*.js') ?: [], glob(__DIR__ . '/*.css') ?: [])))), 0, 8);
+    $html = preg_replace('~((?:src|href)=")(?!https?:|//)([^"?]+\.(?:js|css))"~', '$1$2?v=' . $v . '"', $html);
+    $html = preg_replace('~<head>~i', '<head><script nonce="' . $nonce . '">window.__orbV="?v=' . $v . '";</script>', $html, 1);
     header('Content-Type: text/html; charset=utf-8');
     header('Cache-Control: no-cache');
     header("Content-Security-Policy: default-src 'self'; script-src 'nonce-$nonce' 'strict-dynamic' 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https: http:; media-src 'self' blob: https: http:; frame-src 'self' https: http:; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'");
