@@ -13,7 +13,7 @@ window.ORB_DE = {
   'Close / exit': 'Schließen / Beenden', 'ESC to close': 'Esc zum Schließen', 'Esc': 'Esc', 'Cancel': 'Abbrechen', 'Save': 'Speichern', 'Delete': 'Löschen',
   'Edit': 'Bearbeiten', 'Create': 'Erstellen', 'Copy': 'Kopieren', 'Reset': 'Zurücksetzen', 'Apply': 'Anwenden', 'Retry': 'Erneut versuchen',
   'Remove': 'Entfernen', 'Insert': 'Einfügen', 'Test': 'Testen', 'Upload': 'Hochladen', 'Open →': 'Öffnen →', 'Next →': 'Weiter →', '← Prev': '← Zurück',
-  'Skip': 'Überspringen', 'Enabled': 'Aktiv', 'All': 'Alle', 'Today': 'Heute', 'Yes': 'Ja', 'No': 'Nein', 'Required': 'Pflichtfeld', 'Optional': 'Optional',
+  'Skip': 'Überspringen', 'Enabled': 'Aktiv', 'All': 'Alle', 'Today': 'Heute', 'Yes': 'Ja', 'No': 'Nein', 'Required': 'Pflichtfeld', 'In list': 'In Liste', 'Optional': 'Optional',
   'Loading…': 'Lädt…', 'Saved': 'Gespeichert', '✓ Saved': '✓ Gespeichert', 'Deleted': 'Gelöscht', 'Could not save.': 'Konnte nicht gespeichert werden.',
   'Failed to load': 'Laden fehlgeschlagen', 'Upload failed': 'Upload fehlgeschlagen', 'Upload error': 'Upload-Fehler', 'Unlink': 'Verknüpfung lösen',
   'Details': 'Details', 'Actions': 'Aktionen', 'Status': 'Status', 'Title': 'Titel', 'Slug': 'Slug', 'Role': 'Rolle', 'Password': 'Passwort', 'Username': 'Benutzername',

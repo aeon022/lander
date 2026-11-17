@@ -172,31 +172,43 @@
     const siteLocalesMeta = await fetch('/api/meta/site~locales',{credentials:'include'}).then(r=>r.ok?r.json():null).catch(()=>null);
     const siteLocales = (siteLocalesMeta?.value ?? '').split(',').map(s => s.trim()).filter(Boolean);
 
+    // Fields marked "In list" (schema editor) become columns; the first date field sorts newest first by default
+    const colSchema = (await fetch('/api/collections', { credentials: 'include' }).then(r => r.json()).catch(() => []))
+      .find(c => c.id === colId)?.schema ?? {};
+    const listCols = Object.entries(colSchema).filter(([, f]) => f && f.list).map(([k, f]) => ({ key: k, label: f.label || k, type: f.type }));
+    const dateCol = listCols.find(c => c.type === 'date' || c.type === 'datetime');
+    const cellText = (c, v) => {
+      if (v === undefined || v === null || v === '') return '—';
+      if (c.type === 'date' || c.type === 'datetime') return typeof window.orbDate === 'function' ? window.orbDate(String(v).slice(0, 10)) : String(v).slice(0, 10);
+      if (c.type === 'boolean') return v ? '✓' : '—';
+      if (Array.isArray(v)) return v.join(', ');
+      if (typeof v === 'object') return '✓';
+      return String(v);
+    };
     let allEntries   = [];
     let activeFilter = '';
     let activeLocale = '';  // '' = default/primary locale
     let selected     = new Set();
-    let sortField    = 'updated_at';
+    let sortField    = dateCol ? 'f:' + dateCol.key : 'updated_at';
     let sortDir      = -1; // -1 = desc, 1 = asc
 
     function sortEntries(entries) {
+      const val = (e, f) => f === 'title' ? (e.data?.title || e.slug || '').toLowerCase()
+        : f === 'status' ? (e.status || '')
+        : f.startsWith('f:') ? String(e.data?.[f.slice(2)] ?? '').toLowerCase()
+        : (e.updated_at || '');
+      const cmp = (x, y) => (x < y ? -1 : x > y ? 1 : 0);
       return [...entries].sort((a, b) => {
-        let av, bv;
-        if (sortField === 'title') {
-          av = (a.data?.title || a.slug || '').toLowerCase();
-          bv = (b.data?.title || b.slug || '').toLowerCase();
-        } else if (sortField === 'status') {
-          av = a.status || ''; bv = b.status || '';
-        } else {
-          av = a.updated_at || ''; bv = b.updated_at || '';
-        }
-        return av < bv ? -sortDir : av > bv ? sortDir : 0;
+        const r = cmp(val(a, sortField), val(b, sortField)) * sortDir;
+        // equal values (e.g. same band): newest date first, then title
+        if (r !== 0 || !dateCol || sortField === 'f:' + dateCol.key) return r || cmp(val(a, 'title'), val(b, 'title'));
+        return cmp(val(b, 'f:' + dateCol.key), val(a, 'f:' + dateCol.key)) || cmp(val(a, 'title'), val(b, 'title'));
       });
     }
 
     window.setSort = function(field) {
       if (sortField === field) sortDir *= -1;
-      else { sortField = field; sortDir = field === 'updated_at' ? -1 : 1; }
+      else { sortField = field; sortDir = (field === 'updated_at' || (dateCol && field === 'f:' + dateCol.key)) ? -1 : 1; }
       renderEntries(allEntries);
     };
 
@@ -262,14 +274,14 @@
       const si = (f) => sortField === f ? (sortDir === 1 ? ' ↑' : ' ↓') : '';
       const sh = (f, label) => `<th style="cursor:pointer;user-select:none;white-space:nowrap" data-on-click="setSort('${f}')">${label}${si(f)}</th>`;
       const statusTh  = isTrash ? '<th>Deleted</th>'  : sh('status','Status');
-      const updatedTh = isTrash ? '<th><span class="sr-only">Actions</span></th>'          : sh('updated_at','Updated');
+      const updatedTh = isTrash ? '<th><span class="sr-only">Actions</span></th>'          : listCols.length ? '' : sh('updated_at','Updated');   // with list columns the row is already wide
       wrap.innerHTML = `
         <table>
           <thead>
             <tr>
               ${canSort ? '<th class="drag-col"><span class="sr-only">Reorder</span></th>' : ''}
               <th class="cb-col"><input type="checkbox" id="check-all" title="Select all" aria-label="Select all" /></th>
-              ${sh('title','Title / Slug')}${statusTh}${updatedTh}<th><span class="sr-only">Actions</span></th>
+              ${sh('title','Title / Slug')}${listCols.map(c => sh('f:' + c.key, escHtml(c.label))).join('')}${statusTh}${updatedTh}<th><span class="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody>
@@ -291,8 +303,9 @@
                   <div style="color:var(--heading);font-weight:500">${escHtml(title)}${localeBadge}</div>
                   <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px">${escHtml(e.slug)}</div>
                 </td>
+                ${listCols.map(c => `<td style="font-size:12px;${c.type === 'date' || c.type === 'datetime' ? 'white-space:nowrap' : 'max-width:170px'}">${escHtml(cellText(c, e.data?.[c.key]))}</td>`).join('')}
                 <td>${isTrash ? `<span style="font-family:var(--mono);font-size:11px;color:var(--muted)">${deleted}</span>` : `<span class="badge badge-${e.status}">${String(e.status).replace(/_/g, ' ')}${schedInfo}</span>`}</td>
-                <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${isTrash ? '' : updated}</td>
+                ${isTrash || !listCols.length ? `<td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${isTrash ? '' : updated}</td>` : ''}
                 <td style="width:1%;white-space:nowrap">
                   <div class="row-actions">
                     ${isTrash

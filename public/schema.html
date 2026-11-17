@@ -201,7 +201,7 @@
     }
 
     const VALIDATABLE_TYPES = new Set(['string','url','email','richtext','number']);
-    function addFieldRow(container, key='', label='', type='string', required=false, options='', collection='', multiple=true, group='', depth='', min='', max='', regex='') {
+    function addFieldRow(container, key='', label='', type='string', required=false, options='', collection='', multiple=true, group='', depth='', min='', max='', regex='', list=false) {
       const div = document.createElement('div');
       div.style.cssText = S.row;
       div.setAttribute('draggable','true');
@@ -242,6 +242,10 @@
             </label>
             <button type="button" style="${S.btnRm}" data-on-click="orbH.rmClosest(this,'[style]')">✕</button>
           </div>
+          <label style="${S.reqW}" title="Show this field as a column in the entry list">
+            <input type="checkbox" class="f-list"${list?' checked':''} />
+            <span style="${S.reqTxt}">In list</span>
+          </label>
           <div class="fr-opts-validate" style="display:${VALIDATABLE_TYPES.has(type)?'flex':'none'};gap:4px;">
             <input class="f-min" type="number" style="${S.input};width:52px" placeholder="min" value="${escHtml(String(min??''))}" title="Min length (text) or min value (number)" />
             <input class="f-max" type="number" style="${S.input};width:52px" placeholder="max" value="${escHtml(String(max??''))}" title="Max length (text) or max value (number)" />
@@ -327,6 +331,7 @@
         if (minV !== '' && minV != null) entry.min = Number(minV);
         if (maxV !== '' && maxV != null) entry.max = Number(maxV);
         if (rgx) entry.regex = rgx;
+        if (row.querySelector('.f-list')?.checked) entry.list = true;
         schema[key]=entry;
       });
       return schema;
@@ -454,7 +459,7 @@
       `;
       const rowsEl=document.getElementById('edit-field-rows');
       enableFieldDrag(rowsEl);
-      Object.entries(schema).forEach(([k,f])=>addFieldRow(rowsEl,k,f.label??k,f.type??'string',!!f.required,(f.options??[]).join(', '),f.collection??'',f.multiple!==false,f.group??'',f.depth??'',f.min??'',f.max??'',f.regex??''));
+      Object.entries(schema).forEach(([k,f])=>addFieldRow(rowsEl,k,f.label??k,f.type??'string',!!f.required,(f.options??[]).join(', '),f.collection??'',f.multiple!==false,f.group??'',f.depth??'',f.min??'',f.max??'',f.regex??'',!!f.list));
       document.getElementById('btn-add-edit').addEventListener('click',()=>addFieldRow(rowsEl));
       document.getElementById('btn-export-schema').addEventListener('click',()=>{
         const blob=new Blob([JSON.stringify(serializeSchema(rowsEl),null,2)],{type:'application/json'});
@@ -467,7 +472,7 @@
           try {
             const s=JSON.parse(ev.target.result);
             rowsEl.innerHTML='';
-            Object.entries(s).forEach(([k,f])=>addFieldRow(rowsEl,k,f.label??k,f.type??'string',!!f.required,(f.options??[]).join(', '),f.collection??'',f.multiple!==false,f.group??'',f.depth??'',f.min??'',f.max??'',f.regex??''));
+            Object.entries(s).forEach(([k,f])=>addFieldRow(rowsEl,k,f.label??k,f.type??'string',!!f.required,(f.options??[]).join(', '),f.collection??'',f.multiple!==false,f.group??'',f.depth??'',f.min??'',f.max??'',f.regex??'',!!f.list));
           } catch { alert('Invalid schema JSON'); }
         };
         reader.readAsText(file); e.target.value='';
@@ -489,7 +494,7 @@
         const s = SCHEMAS[tpl];
         if (!s) return;
         rowsEl.innerHTML='';
-        Object.entries(s).forEach(([k,f])=>addFieldRow(rowsEl,k,f.label??k,f.type??'string',!!f.required,(f.options??[]).join(', '),f.collection??'',f.multiple!==false,f.group??'',f.depth??'',f.min??'',f.max??'',f.regex??''));
+        Object.entries(s).forEach(([k,f])=>addFieldRow(rowsEl,k,f.label??k,f.type??'string',!!f.required,(f.options??[]).join(', '),f.collection??'',f.multiple!==false,f.group??'',f.depth??'',f.min??'',f.max??'',f.regex??'',!!f.list));
         showBannerIn('banner','banner-ok',`Template "${tpl}" applied — click Save to persist`);
       });
       // Load existing preview URL for this collection

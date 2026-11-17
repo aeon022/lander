@@ -100,3 +100,8 @@
 - `xfce.js`: bleiben mehr als 6 Sammlungen ohne Gruppe, wandern die überzähligen in einen Auffang-Drawer «Mehr» (de: «Mehr»), so wird der Dock nie breiter als der Bildschirm. Dock-Namen kürzen auf den ersten Teil des Labels («Referenzen (Projekte)» → «Referenzen», «Auftraggeber & Partner» → «Auftraggeber»), der volle Name steht im Tooltip. Kein «…» mehr.
 - `style.css`: Dock `max-width: calc(100vw - 16px)`, Drawer-Popups scrollen ab 70 vh. `i18n-de.js`: «More» → «Mehr».
 - Getestet (Docker, Tappauf-Daten, 10 Sammlungen): mit Gruppen 13 statt 16 Dock-Einträge; ohne Gruppen 5 Sammlungen + «Mehr». Tappauf bekommt drei thematische Gruppen (Auftritt, Arbeit, Menschen) in seinem Pod.
+
+## 2026-11-17 — Eintragsliste mit Spalten (0.6.2)
+- Neu im Schema-Editor pro Feld: Haken «In list» (`list: true` im Feldschema). Solche Felder erscheinen als Spalten in der Eintragsliste (`entries.html`), Datumsfelder deutsch formatiert, Spalten sortierbar.
+- Sortierung: gibt es ein Datumsfeld in der Liste, ist es die Standardsortierung (neueste zuerst); Sortieren nach einer Spalte (z. B. Band) sortiert bei Gleichstand nach Datum (neueste zuerst), dann nach Titel. Mit Spalten entfällt die Spalte «Updated» (Platz).
+- Anlass: Konzerte von martin-burboeck.com (eine Band spielt mehrere Konzerte → nach Band und Datum ordnen). Getestet im Browser (Headless-Chrome, Docker, 16 Konzerte): Standardsortierung, Klick auf «Band», keine Konsolenfehler.
