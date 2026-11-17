@@ -781,6 +781,21 @@
           btn.href = siteUrl + tpl.replace('{slug}', encodeURIComponent(cur || params.get('slug') || '')); btn.style.display = 'inline-flex';
         };
         update(); setInterval(update, 2000);   // the slug can change while editing
+        // phone / tablet: show the preview in a sheet instead of a new tab (same site only)
+        btn.addEventListener('click', ev => {
+          if (!matchMedia('(max-width: 900px)').matches) return;
+          let u; try { u = new URL(btn.href); } catch (x) { return; }
+          if (u.origin !== location.origin) return;
+          ev.preventDefault();
+          const bd = document.createElement('div'); bd.className = 'orb-sheet-bd orb-preview';
+          const bar = document.createElement('div'); bar.className = 'orb-preview-bar';
+          const t = document.createElement('span'); t.textContent = 'Preview';
+          const open = document.createElement('a'); open.href = btn.href; open.target = '_blank'; open.rel = 'noopener'; open.textContent = '↗';
+          const x = document.createElement('button'); x.textContent = '✕'; x.setAttribute('aria-label', 'Close'); x.addEventListener('click', () => bd.remove());
+          bar.append(t, open, x);
+          const f = document.createElement('iframe'); f.src = btn.href; f.title = 'Preview';
+          bd.append(bar, f); document.body.appendChild(bd);
+        });
       } catch (e) {}
     })();
     const IS_SINGLETON = params.get('singleton') === '1';
@@ -1839,8 +1854,8 @@
       const svg = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%236d28d9'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-size='18' font-family='sans-serif' font-weight='700' fill='white'%3E%E2%97%86%3C/text%3E%3Ccircle cx='26' cy='6' r='5' fill='%23e6a817'/%3E%3C/svg%3E`;
       link.href = svg;
     }
-    function markDirty() { _dirty = true; setFaviconBadge(true); }
-    function markClean() { _dirty = false; setFaviconBadge(false); }
+    function markDirty() { _dirty = true; setFaviconBadge(true); document.documentElement.classList.add('orb-dirty'); }
+    function markClean() { _dirty = false; setFaviconBadge(false); document.documentElement.classList.remove('orb-dirty'); }
 
     window.addEventListener('beforeunload', e => {
       if (_dirty) { e.preventDefault(); e.returnValue = ''; }
