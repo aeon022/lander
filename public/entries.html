@@ -296,17 +296,17 @@
               const schedInfo   = e.status === 'scheduled' && e.publish_at ? ` · ${e.publish_at.split(' ')[0]}` : '';
               const localeParam = e.locale ? `&locale=${encodeURIComponent(e.locale)}` : '';
               const localeBadge = e.locale ? `<span style="font-family:var(--mono);font-size:9px;color:var(--muted);background:var(--bg3);border:1px solid var(--line);border-radius:4px;padding:1px 5px;margin-left:5px;vertical-align:middle">${e.locale}</span>` : '';
-              return `<tr data-slug="${orbEsc(e.slug)}" data-locale="${orbEsc(e.locale ?? '')}"${canSort ? ' draggable="true"' : ''}>
+              return `<tr data-slug="${orbEsc(e.slug)}" data-locale="${orbEsc(e.locale ?? '')}" data-edit="/editor.html?collection=${colId}&slug=${orbEsc(e.slug)}${localeParam}"${canSort ? ' draggable="true"' : ''}>
                 ${canSort ? `<td class="drag-col"><span class="drag-handle" title="Drag to reorder">⠿</span></td>` : ''}
                 <td class="cb-col"><input type="checkbox" class="row-cb" data-slug="${orbEsc(e.slug)}" data-locale="${orbEsc(e.locale ?? '')}" ${selected.has(e.slug) ? 'checked' : ''} /></td>
-                <td>
+                <td class="c-title">
                   <div style="color:var(--heading);font-weight:500">${escHtml(title)}${localeBadge}</div>
                   <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px">${escHtml(e.slug)}</div>
                 </td>
-                ${listCols.map(c => `<td style="font-size:12px;${c.type === 'date' || c.type === 'datetime' ? 'white-space:nowrap' : 'max-width:170px'}">${escHtml(cellText(c, e.data?.[c.key]))}</td>`).join('')}
-                <td>${isTrash ? `<span style="font-family:var(--mono);font-size:11px;color:var(--muted)">${deleted}</span>` : `<span class="badge badge-${e.status}">${String(e.status).replace(/_/g, ' ')}${schedInfo}</span>`}</td>
+                ${listCols.map(c => `<td class="c-list" data-label="${escHtml(c.label)}" style="font-size:12px;${c.type === 'date' || c.type === 'datetime' ? 'white-space:nowrap' : 'max-width:170px'}">${escHtml(cellText(c, e.data?.[c.key]))}</td>`).join('')}
+                <td class="c-status">${isTrash ? `<span style="font-family:var(--mono);font-size:11px;color:var(--muted)">${deleted}</span>` : `<span class="badge badge-${e.status}">${String(e.status).replace(/_/g, ' ')}${schedInfo}</span>`}</td>
                 ${isTrash || !listCols.length ? `<td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${isTrash ? '' : updated}</td>` : ''}
-                <td style="width:1%;white-space:nowrap">
+                <td class="c-act" style="width:1%;white-space:nowrap">
                   <div class="row-actions">
                     ${isTrash
                       ? `<button class="btn-row restore-btn" data-slug="${orbEsc(e.slug)}" data-locale="${orbEsc(e.locale ?? '')}">Restore</button>
@@ -325,6 +325,10 @@
 
       // Select all
       document.getElementById('check-all').addEventListener('change', e => {
+        wrap.querySelectorAll('tbody tr[data-edit]').forEach(tr => tr.addEventListener('click', ev => {
+          if (ev.target.closest('a,button,input,.drag-handle') || !matchMedia('(max-width: 900px)').matches || activeFilter === 'trash') return;
+          location.href = tr.dataset.edit;
+        }));
         wrap.querySelectorAll('.row-cb').forEach(cb => {
           cb.checked = e.target.checked;
           if (e.target.checked) selected.add(cb.dataset.slug);
@@ -604,10 +608,38 @@
 
     // New entry modal
     const overlay = document.getElementById('modal-overlay');
-    document.getElementById('new-btn').addEventListener('click', () => {
+    // Fields marked "In list" can be filled in right in the dialog (date, band, place …): a new concert takes seconds, also on a phone.
+    const quickFields = listCols;
+    const relOpts = {};
+    async function buildQuickFields() {
+      const box = document.getElementById('modal-fields'); box.innerHTML = '';
+      for (const c of quickFields) {
+        const f = colSchema[c.key] ?? {}; let input;
+        if (f.type === 'select') input = `<select class="input" data-qf="${c.key}"><option value="">—</option>${(f.options ?? []).map(o => `<option>${escHtml(o)}</option>`).join('')}</select>`;
+        else if (f.type === 'relation') {
+          relOpts[f.collection] ??= await fetch(`/api/collections/${f.collection}/entries`, { credentials: 'include' }).then(r => r.ok ? r.json() : []).catch(() => []);
+          input = `<select class="input" data-qf="${c.key}"><option value="">—</option>${relOpts[f.collection].map(e => `<option value="${escHtml(e.id)}">${escHtml(e.data?.title ?? e.data?.name ?? e.slug)}</option>`).join('')}</select>`;
+        } else if (f.type === 'date') input = `<input class="input" type="date" data-qf="${c.key}" />`;
+        else if (f.type === 'number') input = `<input class="input" type="number" data-qf="${c.key}" />`;
+        else if (f.type === 'boolean') input = `<input type="checkbox" data-qf="${c.key}" />`;
+        else input = `<input class="input" data-qf="${c.key}" ${f.type === 'url' ? 'type="url" placeholder="https://…"' : ''} />`;
+        box.insertAdjacentHTML('beforeend', `<div class="field"><label class="label">${escHtml(c.label)}</label>${input}</div>`);
+      }
+      const pr = document.getElementById('modal-publish-row'); pr.style.display = quickFields.length && canPublish ? 'flex' : 'none';
+      box.querySelectorAll('[data-qf]').forEach(el => el.addEventListener('input', autoSlug));
+    }
+    const slugify = (t) => t.toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-').replace(/^-|-$/g,'').slice(0,60);
+    function autoSlug() {   // title + date → a slug that stays unique when the same band plays on several days
+      const slug = document.getElementById('new-slug'); if (slug._touched) return;
+      const d = document.querySelector('#modal-fields input[type=date]')?.value || '';
+      slug.value = slugify(document.getElementById('new-title').value + (d ? '-' + d : ''));
+    }
+    document.getElementById('new-btn').addEventListener('click', async () => {
       _activeTpl = null;
+      document.getElementById('new-slug')._touched = false;
+      await buildQuickFields();
       overlay.style.display = 'flex';
-      document.getElementById('new-slug').focus();
+      document.getElementById('new-title').focus();
     });
     document.getElementById('modal-cancel').addEventListener('click', () => {
       overlay.style.display = 'none';
@@ -616,9 +648,7 @@
     // Auto-generate slug from title
     document.getElementById('new-title').addEventListener('input', e => {
       const slug = document.getElementById('new-slug');
-      if (!slug._touched) {
-        slug.value = e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 60);
-      }
+      if (!slug._touched) autoSlug();
     });
     document.getElementById('new-slug').addEventListener('input', e => {
       e.target._touched = e.target.value.length > 0;
@@ -633,10 +663,15 @@
       errEl.style.display = 'none';
 
       const entryData = _activeTpl ? { ..._activeTpl.data, title } : { title };
+      document.querySelectorAll('#modal-fields [data-qf]').forEach(el => {
+        const v = el.type === 'checkbox' ? el.checked : el.value;
+        if (v !== '' && v !== false) entryData[el.dataset.qf] = el.type === 'number' ? Number(v) : v;
+      });
+      const publishNow = document.getElementById('modal-publish')?.checked && canPublish;
       const res = await fetch(`/api/collections/${colId}/entries`, {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, data: entryData, status: 'draft', locale: activeLocale }),
+        body: JSON.stringify({ slug, data: entryData, status: publishNow ? 'published' : 'draft', locale: activeLocale }),
       });
       if (res.ok) {
         slug = (await res.json().catch(() => null))?.slug || slug;   // slug as the server saved it
@@ -665,6 +700,8 @@
         <label class="label" for="new-title">Title</label>
         <input class="input" id="new-title" placeholder="Entry title" />
       </div>
+      <div id="modal-fields"></div>
+      <label id="modal-publish-row" style="display:none;align-items:center;gap:8px;font-size:13px;margin:4px 0 12px"><input type="checkbox" id="modal-publish" /> <span>Create and publish right away</span></label>
       <div id="modal-error" style="color:var(--red);font-size:12px;margin-bottom:12px;display:none"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="btn btn-ghost" id="modal-cancel">Cancel</button>

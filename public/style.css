@@ -3528,3 +3528,36 @@ html[data-lander][data-scheme="dark"]:not([data-theme]) { --accent: #f0a63a; --a
 
 /* long drawer lists scroll instead of running off the screen */
 .xfce-drawer-popup { max-height: 70vh; overflow-y: auto; }
+
+
+/* ── Artists: phone and tablet ─────────────────────────────────────────────────────────────────────────────────
+   Entry lists become cards (tap a card to edit), the tab bar shows labels, touch targets are at least 44px. */
+@media (max-width: 900px) {
+  #entries-wrap table, #entries-wrap tbody { display: block; width: 100%; min-width: 0 !important; table-layout: auto; }
+  #entries-wrap { overflow: hidden; }
+  #entries-wrap thead { display: none; }
+  #entries-wrap tr { box-sizing: border-box; width: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 14px 16px; border-bottom: 1px solid var(--line); cursor: pointer; }
+  #entries-wrap td { display: block; border: 0 !important; padding: 0 !important; width: auto !important; max-width: none !important; }
+  #entries-wrap td.cb-col, #entries-wrap td.drag-col { display: none; }
+  #entries-wrap td.c-title { flex: 1 1 100%; }
+  #entries-wrap td.c-title > div:first-child { font-size: 16px; }
+  #entries-wrap td.c-list { color: var(--muted); font-size: 13px !important; }
+  #entries-wrap td.c-list:empty { display: none; }
+  #entries-wrap td.c-status { margin-left: auto; }
+  #entries-wrap td.c-act { flex: 1 1 100%; margin-top: 6px; }
+  #entries-wrap td.c-act .row-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  #entries-wrap td.c-act .btn-row { min-height: 38px; padding: 0 12px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; }
+  .btn, .filter-tab { min-height: 40px; }
+}
+@media (max-width: 900px) and (pointer: coarse) {
+  .xfce-dock-lbl { display: block !important; font-size: 10px; margin-top: 2px; }
+  .xfce-dock-item { min-width: 54px; padding: 6px 6px 3px; }
+  html[data-style="xfce"] { --dock-h: 70px; }
+  input, select, textarea, .input { font-size: 16px; }   /* no zoom-in on iOS when a field gets focus */
+}
+
+/* notch and home indicator: the top bar and the tab bar keep clear of them */
+@supports (padding: env(safe-area-inset-top)) {
+  html[data-style="xfce"] .xfce-sb { padding-top: env(safe-area-inset-top); height: calc(var(--sb-h) + env(safe-area-inset-top)); }
+}
+@media (display-mode: standalone) { body { overscroll-behavior-y: none; } }
