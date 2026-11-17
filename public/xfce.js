@@ -2039,3 +2039,18 @@
     init();
   }
 })();
+
+// ── Editors (role "editor", e.g. the artist himself) see a short dock: no users, schema, build, import … ────────────────
+// The server refuses these actions for editors anyway (admin-only); this only keeps the screen tidy.
+(function () {
+  var HIDE = ['/users.html', '/pods.html', '/schema.html', '/build.html', '/publish.html', '/import.html', '/forms.html', '/analytics.html', '/snippets.html', '/collections.html'];
+  fetch('/api/auth/me', { credentials: 'include' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (me) {
+    if (!me || !me.user || me.user.role === 'admin') return;
+    function sweep() {
+      document.querySelectorAll('.xfce-dock a[href], .xfce-dock-popup a[href], .xfce-tools-popup a[href], .mobile-tabbar a[href]').forEach(function (a) {
+        var h = a.getAttribute('href') || ''; if (HIDE.some(function (x) { return h.indexOf(x) === 0; })) a.remove();
+      });
+    }
+    sweep(); new MutationObserver(sweep).observe(document.body, { childList: true, subtree: true });
+  }).catch(function () {});
+})();

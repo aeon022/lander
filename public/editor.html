@@ -669,6 +669,7 @@
             </button>
             <button type="button" class="tool-btn" data-on-click="exportMarkdown()" title="Export Markdown (⌘⇧E)" style="font-size:9px;letter-spacing:.04em;">↓ md</button>
             <div class="tool-sep"></div>
+            <a id="preview-btn" class="tool-btn" target="_blank" rel="noopener" style="display:none;text-decoration:none;align-items:center;padding:0 12px;font-size:11px;font-weight:600;letter-spacing:.03em">Preview ↗</a>
             <div class="ai-btn-group">
               <button type="button" class="ai-toolbar-btn" data-on-click="openAiPanel()" title="AI Assistant">✦ AI</button>
               <button type="button" class="suggest-toolbar-btn" id="suggest-trigger-btn" data-on-click="triggerSuggestions()" title="Smart Suggestions">✦ Suggest</button>
@@ -767,6 +768,18 @@
     // Parse ?collection=X&slug=Y&singleton=1&locale=de from URL
     const params = new URLSearchParams(location.search);
     const COLLECTION = params.get('collection');
+    // "Preview" opens the real website page for this entry (drafts too: the site asks Lander, you are signed in).
+    // Settings: meta site.preview = {"events": "/events/?vorschau={slug}", …}; site.url = the website's address (default: this server's root).
+    (async () => {
+      try {
+        const cfg = JSON.parse((await fetch('/api/meta/site~preview', { credentials: 'include' }).then(r => r.json()).catch(() => ({}))).value || '{}');
+        const tpl = cfg[COLLECTION]; if (!tpl) return;
+        const siteUrl = ((await fetch('/api/meta/site~url', { credentials: 'include' }).then(r => r.json()).catch(() => ({}))).value || location.origin).replace(/\/$/, '');
+        const btn = document.getElementById('preview-btn');
+        const update = () => { btn.href = siteUrl + tpl.replace('{slug}', encodeURIComponent(currentSlug || params.get('slug') || '')); btn.style.display = 'inline-flex'; };
+        update(); setInterval(update, 2000);   // the slug can change while editing
+      } catch (e) {}
+    })();
     const IS_SINGLETON = params.get('singleton') === '1';
     const LOCALE = params.get('locale') ?? '';
 
