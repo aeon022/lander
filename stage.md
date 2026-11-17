@@ -117,3 +117,9 @@
 - **Kopieren mit neuem Datum** (Sammlungen mit Datumsfeld in der Liste), **Klartext-Fehler** statt «Error» beim Speichern, KI-Knöpfe ausgeblendet.
 - **Vorschau:** Knopf «Vorschau» im Editor, wenn `site.preview` (JSON: {"events": "/events/?vorschau={slug}"}) gesetzt ist; `site.url` = Adresse der Website. Die Website liest Entwürfe über die Admin-API (angemeldet, gleicher Ursprung).
 - **Redakteur-Rolle:** Dock ohne Nutzer/Schema/Build/Import …; der Server verweigert diese Aktionen ohnehin (403).
+
+
+## 2026-11-17 — 0.7.1–0.7.4 (Dock, Handy, Tempo)
+- 0.7.1 Dock mit Beschriftung und Schubladen am Handy; 0.7.2 einheitliche Einträge; 0.7.3 gleitende Pille, Entwurfs-Badges, Seitenwechsel ohne Neuladen, Dock-Cache, versionierte Dateien (`index.php` fügt `?v=` ein, `.htaccess` setzt «immutable» per `E=ORB_IMMUTABLE`), «Zuletzt besucht», Deutsch als Standard; 0.7.4 Schubladen wie Notizen/To-do.
+- Handy-Audit: Listen mit «⋯»-Sheet und Wischgesten, Touch-Ziele, Skeletons, Vorschau-Sheet, Ungespeichert-Punkt.
+- Live bei martin-burboeck.com ausgerollt (Ein-Klick-Update); die `.htaccess`-Regel greift dort (geprüft: `?v=` liefert `immutable`).

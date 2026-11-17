@@ -29,7 +29,13 @@ The content lives in one SQL file (`content.pod`, a plain SQLite database, only 
 - **Live read API:** `/api/public/<collection>[/<slug>]` with CORS for your sites and a short cache (10 s by default). Image, file and media fields are resolved to `{ id, url, alt, type }`.
 - **Image variants:** `/api/public/media/<id>?w=800&ar=16:9&fmt=webp`, resized, cropped around the focal point and re-encoded (GD), cached on disk. Sizes, ratios and formats snap to fixed sets, so the cache stays bounded.
 - **Markdown import:** `.md` with frontmatter through Admin → Import or `bin/lander import-md`.
-- **Media as files:** uploads go to `public/media/` (this folder is not part of the release ZIP, so unpacking a release over your install cannot overwrite your uploads; never "replace" the folder by hand) (JPG, PNG, WebP, GIF, AVIF, PDF; real file type checked, PHP execution blocked there).
+- **Media as files:** uploads go to `public/media/` (this folder is not part of the release ZIP, so unpacking a release over your install cannot overwrite your uploads; never "replace" the folder by hand) (JPG, PNG, WebP, GIF, AVIF, PDF, audio and video; real file type checked, PHP execution blocked there).
+- **Music and video:** MP3, M4A, AAC, OGG, WAV, FLAC, MP4, WebM and MOV upload as media files and are served with range requests (Safari can seek). New installs allow 40 MB per upload (`max_upload_mb`).
+- **Made for phones and tablets:** dock labels, drawers as floating panels, list rows with a "⋯" menu and swipe actions, 44 px touch targets, a pulsing unsaved dot, preview in a sheet, an installable admin (web-app manifest, iOS meta tags, safe areas). The admin is German by default (Settings → Admin language).
+- **Preview:** meta `site.preview` (for example `{"events": "/events/?vorschau={slug}"}`) and `site.url`: a *Preview* button in the editor opens the real page of your site, drafts included while you are signed in.
+- **Quick-create and copy:** the "new entry" dialog asks for the list columns and can publish right away; *Copy with a new date* duplicates an entry and renames its slug. Relation fields can be single-choice (`multiple: false`) and show a dropdown.
+- **Editor role:** editors get a short dock (no schema, users, build, import); the server refuses those actions with 403.
+- **A dock that glides, and quick pages:** one glass pill follows the cursor (spotlight, aurora ring on the active item), draft badges, pages swap in place with a soft transition, the dock is drawn from a cached answer, scripts and styles carry `?v=` and are cached for a year (needs `mod_rewrite` + `mod_headers`; works without), "recently visited" in the command palette.
 - **Installer:** open `install.php` once. It detects subfolder or domain root, writes the config, creates the first admin and deletes itself.
 - **Subfolder or subdomain:** `example.at/lander/` works as well as `redaktion.example.at`.
 - **Backup, restore, move:** automatic weekly backups, download as SQL file or ZIP with media, restore with validation, `bin/lander backup` for cron.
@@ -104,7 +110,7 @@ Add your site's origin to `public_origins` in the config so browsers may read th
 | `data_dir` | rate-limit files, backups, image cache |
 | `media_dir`, `media_url` | where uploads are stored, and their public path or full URL |
 | `base_path` | `''` for a domain root, `'/lander'` for a subfolder |
-| `max_upload_mb`, `max_restore_mb` | upload and restore limits |
+| `max_upload_mb`, `max_restore_mb` | upload and restore limits (new installs: 40 MB uploads, for music and video) |
 | `auto_backup_days`, `auto_backup_keep` | automatic backups (`0` days = off) |
 | `public_cache_seconds` | how long browsers and proxies may reuse `/api/public/...` answers (default 10; `0` = no cache): edits go live after at most this long |
 | `update_check` | ask GitHub (at most every 12 h) whether a newer release exists, show a hint and the “Update now” button in the admin; `false` = never connect and no update button |
