@@ -776,7 +776,10 @@
         const tpl = cfg[COLLECTION]; if (!tpl) return;
         const siteUrl = ((await fetch('/api/meta/site~url', { credentials: 'include' }).then(r => r.json()).catch(() => ({}))).value || location.origin).replace(/\/$/, '');
         const btn = document.getElementById('preview-btn');
-        const update = () => { btn.href = siteUrl + tpl.replace('{slug}', encodeURIComponent(currentSlug || params.get('slug') || '')); btn.style.display = 'inline-flex'; };
+        const update = () => {
+          let cur = ''; try { cur = currentSlug; } catch (e) { /* not initialised yet */ }   // the page script is still starting up
+          btn.href = siteUrl + tpl.replace('{slug}', encodeURIComponent(cur || params.get('slug') || '')); btn.style.display = 'inline-flex';
+        };
         update(); setInterval(update, 2000);   // the slug can change while editing
       } catch (e) {}
     })();
