@@ -77,6 +77,7 @@ final class Api
         match (true) {
             $r === 'auth' && ($seg[1] ?? '') === 'me' => $this->json(['user' => $this->user]),
             $r === 'info' => $this->info(),
+            $r === 'help' && $m === 'GET' => $this->help(),
             $r === 'meta' && $n === 1 && $m === 'GET' => $this->metaAll(),
             $r === 'meta' && $n === 1 && $m === 'PUT' => $this->metaPut(),
             $r === 'meta' && $n === 2 && $m === 'GET' => $this->metaGet($seg[1]),
@@ -400,6 +401,12 @@ final class Api
     private function metaGet(string $k): void { $k = str_replace('~', '.', $k); $this->metaAllowed($k) ? $this->json(['key' => $k, 'value' => $this->pod->getMeta($k)]) : $this->json(['error' => 'Key not allowed'], 403); }
     private const META_ADMIN_ONLY = ['site.url', 'workflow.review', 'format_version', 'build.webhook_url', 'nav.links'];
     /** Non-admins must not change site-wide settings; preview URLs are admin-only and may only be http(s) or site-relative (they end up in an <a href>). */
+    /** Read-only help view (hilfe.html): entries of the 'anleitungen' collection for every signed-in user (drafts included). */
+    private function help(): void
+    {
+        $rows = $this->pod->collection('anleitungen') ? $this->pod->entries('anleitungen') : [];
+        $this->json(array_map(fn($e) => ['slug' => $e['slug'], 'data' => $e['data'], 'updated_at' => $e['updated_at'] ?? null], $rows));
+    }
     /** nav.links = {"Gruppe": [{"label": "...", "url": "https://… oder /…"}]}; die Adressen landen in einem <a href>. */
     private static function validNavLinks(mixed $v): bool
     {

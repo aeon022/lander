@@ -128,7 +128,7 @@
     let eintraege = [];
     try { eintraege = aufbereiten(JSON.parse(sessionStorage.getItem(CACHE) || '[]')); } catch {}
     const holen = async () => {
-      const r = await fetch('/api/collections/anleitungen/entries', { credentials: 'include' });
+      const r = await fetch('/api/help', { credentials: 'include' });
       let l = r.ok ? await r.json() : null;
       if (l && !Array.isArray(l)) l = l.entries ?? [];
       return l;
