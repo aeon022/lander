@@ -1651,6 +1651,7 @@
               var popup = el('div', 'xfce-tools-popup xfce-drawer-popup');
               popup.innerHTML = '<div style="padding:7px 14px 6px;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:6px"><span style="font-size:11px;opacity:.6">⬡</span>' + escHtml(groupLabel) + '<button type="button" class="xfce-drawer-x" aria-label="Close">✕</button></div>';
               popup.querySelector('.xfce-drawer-x').addEventListener('click', function (e) { e.stopPropagation(); popup.classList.remove('open'); hideColPreview(); });
+              var gAnl = null;
               grpCols.forEach(function (gc) {
                 var gcSingleton = !!gc.singleton;
                 var gcHref = gcSingleton
@@ -1668,7 +1669,7 @@
                 a.innerHTML = '<span class="xfce-tools-icon" style="font-size:12px;font-weight:700;font-family:var(--mono);letter-spacing:-.02em">' + gc.label.substring(0, 2) + '</span><span>' + escHtml(gc.label) + '</span>' + statsHtml;
                 a.addEventListener('mouseenter', function () { showColPreview(gc, a); });
                 a.addEventListener('mouseleave', function () { clearTimeout(_renderTimer); _previewTimer = setTimeout(hideColPreview, 150); });
-                popup.appendChild(a);
+                if (gc.id === 'anleitungen') gAnl = a; else popup.appendChild(a);   // Lander: «Anleitungen» ganz unten im Drawer
                 _palItems.push({ icon: gc.label.substring(0, 2), label: gc.label, href: gcHref, group: 'Collections' });
                 _termCols.push({ id: gc.id, label: gc.label, total: gc.total || 0, drafts: gc.drafts || 0, singleton: gcSingleton });
               });
@@ -1685,6 +1686,7 @@
                 popup.appendChild(xa);
                 if (!x.ext) _palItems.push({ icon: x.icon, label: x.label, href: x.href, group: 'Collections' });
               });
+              if (gAnl) popup.appendChild(gAnl);
               popup._drawerBtn = drawerItem;
               drawerItem._groupPopup = popup;
               drawerItem._positionPopup = function () {

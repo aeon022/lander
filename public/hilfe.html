@@ -82,8 +82,11 @@
         .hilfe-prose blockquote { border-left:3px solid var(--accent); padding:2px 14px; color:var(--mid) }
         .hilfe-prose img { max-width:100%; height:auto }
         .hilfe-prose mark { background:var(--gold-bg); color:inherit }
+        @keyframes hilfe-ein { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:none } }
+        .hilfe-text.neu .hilfe-prose, .hilfe-text.neu .hilfe-kopf { animation:hilfe-ein .22s ease-out }
+        @media (prefers-reduced-motion: reduce) { .hilfe-text.neu .hilfe-prose, .hilfe-text.neu .hilfe-kopf { animation:none } }
         .hilfe-leer { color:var(--muted); padding:8px 10px; font-size:13px }
-        @media (max-width: 800px) { .hilfe-grid { grid-template-columns:1fr } .hilfe-liste { position:static; max-height:none } .hilfe-text { padding:18px } }
+        @media (max-width: 800px) { .hilfe-grid { grid-template-columns:1fr } .hilfe-liste { position:static; max-height:34vh; overflow:auto; border-bottom:1px solid var(--line); padding-bottom:6px } .hilfe-text { padding:18px } }
       </style>
     
   <script type="module">
@@ -118,11 +121,18 @@
     const md = (t) => bereinigen(window.marked ? marked.parse(String(t ?? '')) : '<pre>' + orbEsc(String(t ?? '')) + '</pre>');
 
     // Einträge der Sammlung «anleitungen» (Entwürfe gehören dazu: sie sind nur nicht öffentlich). «Technik» sehen nur Admins.
-    const r = await fetch('/api/collections/anleitungen/entries', { credentials: 'include' });
-    let eintraege = r.ok ? await r.json() : [];
-    if (!Array.isArray(eintraege)) eintraege = eintraege.entries ?? [];
-    eintraege = eintraege.filter((e) => e.data?.title && (istAdmin || e.data.gruppe !== 'Technik'))
+    // Beim ersten Zeigen kommen sie aus dem Zwischenspeicher der Sitzung (sofort sichtbar), im Hintergrund wird aktualisiert.
+    const CACHE = 'orb_hilfe_v1';
+    const aufbereiten = (liste) => liste.filter((e) => e.data?.title && (istAdmin || e.data.gruppe !== 'Technik'))
       .sort((a, b) => (a.data.gruppe || '').localeCompare(b.data.gruppe || '') || (a.data.reihenfolge ?? 0) - (b.data.reihenfolge ?? 0));
+    let eintraege = [];
+    try { eintraege = aufbereiten(JSON.parse(sessionStorage.getItem(CACHE) || '[]')); } catch {}
+    const holen = async () => {
+      const r = await fetch('/api/collections/anleitungen/entries', { credentials: 'include' });
+      let l = r.ok ? await r.json() : null;
+      if (l && !Array.isArray(l)) l = l.entries ?? [];
+      return l;
+    };
 
     const liste = document.getElementById('hilfe-liste'), text = document.getElementById('hilfe-text'), suche = document.getElementById('hilfe-suche');
     let aktiv = null;
@@ -137,18 +147,30 @@
       });
       liste.innerHTML = h;
     }
-    function zeige() {
+    let gezeigt = null;
+    function zeige(neu) {
       const slug = decodeURIComponent(location.hash.slice(1));
       const e = eintraege.find((x) => x.slug === slug) ?? eintraege[0];
       aktiv = e?.slug ?? null;
-      text.innerHTML = e
-        ? '<p class="hilfe-kopf">' + orbEsc(e.data.gruppe || '') + '</p><div class="hilfe-prose"><h1>' + orbEsc(e.data.title) + '</h1>' + md(e.data.body) + '</div>'
-        : '<div class="hilfe-leer">Noch keine Anleitungen. Sie werden unter «Hilfe → Anleitungen» angelegt.</div>';
+      const stempel = e ? e.slug + '|' + e.updated_at + '|' + (e.data.body || '').length : '';
+      if (stempel !== gezeigt) {   // nur den Text tauschen; Liste, Kopf und Suche bleiben stehen
+        text.innerHTML = e
+          ? '<p class="hilfe-kopf">' + orbEsc(e.data.gruppe || '') + '</p><div class="hilfe-prose"><h1>' + orbEsc(e.data.title) + '</h1>' + md(e.data.body) + '</div>'
+          : '<div class="hilfe-leer">Noch keine Anleitungen. Sie werden unter «Hilfe → Anleitungen» angelegt.</div>';
+        if (neu) { text.classList.remove('neu'); void text.offsetWidth; text.classList.add('neu'); }
+        gezeigt = stempel;
+      }
       zeigeListe();
     }
     suche.addEventListener('input', zeigeListe);
-    window.addEventListener('hashchange', () => { zeige(); text.focus({ preventScroll: true }); });
-    zeige();
+    window.addEventListener('hashchange', () => { zeige(true); text.focus({ preventScroll: true }); if (innerWidth <= 800) text.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); });
+    zeige(false);
+    if (!eintraege.length) text.innerHTML = '<div class="hilfe-leer">Wird geladen …</div>';
+    holen().then((l) => {
+      if (!l) return;
+      try { sessionStorage.setItem(CACHE, JSON.stringify(l)); } catch {}
+      eintraege = aufbereiten(l); zeige(false);
+    });
   </script>
 </main>
   </div>

@@ -169,6 +169,7 @@
               var rd = document.createElement('a'); rd.className = 'nav-item nav-child' + (page === 'hilfe' ? ' active' : ''); rd.href = '/hilfe.html';
               rd.innerHTML = '<span class="nav-icon">▤</span><span class="nav-label">Hilfe lesen</span>'; body.appendChild(rd);
             }
+            var anlEl = null;
             groupCols.forEach(function (col) {
               var isSingleton = !!col.singleton;
               var isActive = isSingleton
@@ -180,7 +181,7 @@
                 ? '/editor.html?collection=' + encodeURIComponent(col.id) + '&singleton=1'
                 : '/entries.html?col=' + encodeURIComponent(col.id) + '&label=' + encodeURIComponent(col.label);
               a.innerHTML = '<span class="nav-icon">' + (isSingleton ? '◈' : '◦') + '</span><span class="nav-label">' + col.label + '</span>';
-              body.appendChild(a);
+              if (col.id === 'anleitungen') anlEl = a; else body.appendChild(a);   // Lander: «Anleitungen» ganz unten in der Gruppe
             });
             groupLinks.forEach(function (l) {   // Lander: externe Links (neuer Tab)
               if (!l || !/^(https?:\/\/|\/(?!\/))/i.test(String(l.url || ''))) return;
@@ -189,6 +190,7 @@
               var lb = document.createElement('span'); lb.className = 'nav-label'; lb.textContent = l.label || l.url;
               a.appendChild(ic); a.appendChild(lb); body.appendChild(a);
             });
+            if (anlEl) body.appendChild(anlEl);
             groupWrap.appendChild(body);
             frag.appendChild(groupWrap);
           });
