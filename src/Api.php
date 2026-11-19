@@ -17,7 +17,7 @@ require_once __DIR__ . '/DigiId.php';
  */
 final class Api
 {
-    public const VERSION = '0.7.7';
+    public const VERSION = '0.7.8';
     private Pod $pod;
     private ?array $user = null;
     private const STATUSES = ['draft', 'in_review', 'published', 'scheduled'];
@@ -390,7 +390,7 @@ final class Api
             'siteName' => $this->pod->getMeta('site.name'),
             'podSize' => @filesize($this->cfg['pod']) ?: 0,
             'formatVersion' => $this->pod->getMeta('format_version') ?? '1',
-            'adminVersion' => 'Lander ' . self::VERSION . ' · UI from Orbiter 0.3.114',
+            'adminVersion' => 'Lander ' . self::VERSION . ' · UI from Orbiter 0.3.115',
             'collections' => $cols,
             'nav' => ['hidden' => array_values(array_filter(array_map('trim', explode(',', $hidden)))), 'groups' => json_decode($this->pod->getMeta('nav.groups') ?? 'null', true), 'links' => json_decode($this->pod->getMeta('nav.links') ?: 'null', true), 'order' => array_values(array_filter((array)json_decode($this->pod->getMeta('nav.order') ?: '[]', true), 'is_string'))],
         ]);
