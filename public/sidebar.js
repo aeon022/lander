@@ -156,7 +156,7 @@
             groupWrap.classList.add('pinned');
             var header = document.createElement('div');
             header.className = 'nav-group-header open';
-            header.innerHTML = '<span class="nav-group-arrow">▶</span><span class="nav-group-label">' + groupLabel + '</span><span class="nav-group-count">' + (groupCols.length + groupLinks.length) + '</span>';
+            header.innerHTML = '<span class="nav-group-arrow">▶</span><span class="nav-group-label">' + groupLabel + '</span><span class="nav-group-count">' + (groupCols.length + groupLinks.length + (groupCols.some(function (c) { return c.id === 'anleitungen'; }) ? 1 : 0)) + '</span>';
             header.addEventListener('click', function () {
               groupWrap.classList.toggle('pinned');
               header.classList.toggle('open', groupWrap.classList.contains('pinned'));
@@ -165,6 +165,10 @@
 
             var body = document.createElement('div');
             body.className = 'nav-group-body';
+            if (groupCols.some(function (c) { return c.id === 'anleitungen'; })) {   // Lander: Leseansicht der Anleitungen
+              var rd = document.createElement('a'); rd.className = 'nav-item nav-child' + (page === 'hilfe' ? ' active' : ''); rd.href = '/hilfe.html';
+              rd.innerHTML = '<span class="nav-icon">▤</span><span class="nav-label">Hilfe lesen</span>'; body.appendChild(rd);
+            }
             groupCols.forEach(function (col) {
               var isSingleton = !!col.singleton;
               var isActive = isSingleton

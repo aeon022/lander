@@ -1672,6 +1672,19 @@
                 _palItems.push({ icon: gc.label.substring(0, 2), label: gc.label, href: gcHref, group: 'Collections' });
                 _termCols.push({ id: gc.id, label: gc.label, total: gc.total || 0, drafts: gc.drafts || 0, singleton: gcSingleton });
               });
+              // Lander: Leseansicht der Anleitungen und externe Links (nav.links) im Drawer
+              var gExtra = [];
+              if (grpCols.some(function (c) { return c.id === 'anleitungen'; })) gExtra.push({ label: 'Hilfe lesen', href: '/hilfe.html', icon: '▤' });
+              (((info.nav && info.nav.links) || {})[groupLabel] || []).forEach(function (l) {
+                if (l && /^(https?:\/\/|\/(?!\/))/i.test(String(l.url || ''))) gExtra.push({ label: l.label || l.url, href: l.url, icon: '↗', ext: true });
+              });
+              gExtra.forEach(function (x) {
+                var xa = el('a', 'xfce-tools-item' + (!x.ext && page === 'hilfe' ? ' active' : ''));
+                xa.href = x.href; if (x.ext) { xa.target = '_blank'; xa.rel = 'noopener'; }
+                xa.innerHTML = '<span class="xfce-tools-icon" style="font-size:12px;font-weight:700">' + x.icon + '</span><span>' + escHtml(x.label) + '</span>';
+                popup.appendChild(xa);
+                if (!x.ext) _palItems.push({ icon: x.icon, label: x.label, href: x.href, group: 'Collections' });
+              });
               popup._drawerBtn = drawerItem;
               drawerItem._groupPopup = popup;
               drawerItem._positionPopup = function () {
