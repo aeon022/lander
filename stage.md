@@ -130,3 +130,7 @@
 - `window.__orbGo(href)` für Seiten-Skripte (Liste: Zeile antippen, «Bearbeiten», neuer Eintrag).
 - **Fehler gefunden und behoben:** Tippen auf eine Zeile (Handy) öffnete den Eintrag nur nach «Alle auswählen» (Listener lag im falschen Block, seit 0.7.0). Jetzt ein delegierter Klick-Handler. In 0.7.3/0.7.4 live **noch fehlerhaft**; «⋯» → Bearbeiten und Swipe gehen.
 - Getestet (headless, Lander lokal und Orbiter-Admin): Desktop und Handy, Titel ändern, ⌘S speichert (Slug folgt dem Titel, wie bisher), Zurück-Taste, Dock-Klick aus dem Editor mit `beforeunload`-Dialog, keine Konsolenfehler. Nicht getestet: Bild-/Video-Picker, Wikilink-Picker, KI-Panel, Sperr-Hinweis mit zweitem Nutzer, echte Geräte.
+
+## 2026-11-19 — Links in der Seitenleiste (nav.links)
+- `nav.links` (Meta, nur Admin): `{"Gruppe": [{"label": "…", "url": "https://… oder /…"}]}`; erscheint als `↗`-Einträge (neuer Tab) in der gleichnamigen Gruppe aus `nav.groups`. `Api.php` prüft die Adressen (nur http(s) oder seitenrelativ), `/api/info` liefert `nav.links`, `sidebar.js` rendert (`Lander:`-Block). Noch nicht in Orbiter-Admin übernommen, nicht committet.
+- Getestet: weinbank-Lander (lokal 8096 + Test-Server): javascript:-Adresse wird verworfen, Links erscheinen, Headless-Chrome ohne JS-Fehler.

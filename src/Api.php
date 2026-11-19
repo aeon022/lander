@@ -26,7 +26,7 @@ final class Api
         'media.img_max_width', 'media.img_quality', 'media.img_convert_webp',
         'dashboard.notes', 'dashboard.todos', 'dashboard.show_calendar', 'dashboard.show_recent',
         'dashboard.show_collections', 'dashboard.show_workspace', 'ui.theme', 'workflow.review',
-        'format_version', 'nav.hidden', 'nav.groups', 'nav.order', 'build.webhook_url', 'site.preview',
+        'format_version', 'nav.hidden', 'nav.groups', 'nav.links', 'nav.order', 'build.webhook_url', 'site.preview',
     ];
     private const MEDIA_TYPES = [
         'image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif', 'image/avif' => 'avif',
@@ -391,20 +391,32 @@ final class Api
             'formatVersion' => $this->pod->getMeta('format_version') ?? '1',
             'adminVersion' => 'Lander ' . self::VERSION . ' · UI from Orbiter 0.3.96',
             'collections' => $cols,
-            'nav' => ['hidden' => array_values(array_filter(array_map('trim', explode(',', $hidden)))), 'groups' => json_decode($this->pod->getMeta('nav.groups') ?? 'null', true), 'order' => array_values(array_filter((array)json_decode($this->pod->getMeta('nav.order') ?: '[]', true), 'is_string'))],
+            'nav' => ['hidden' => array_values(array_filter(array_map('trim', explode(',', $hidden)))), 'groups' => json_decode($this->pod->getMeta('nav.groups') ?? 'null', true), 'links' => json_decode($this->pod->getMeta('nav.links') ?: 'null', true), 'order' => array_values(array_filter((array)json_decode($this->pod->getMeta('nav.order') ?: '[]', true), 'is_string'))],
         ]);
     }
 
     private function metaAllowed(string $k): bool { return in_array($k, self::META_KEYS, true) || preg_match('/^(preview_url|templates)\.[a-z0-9_-]+$/', $k) === 1; }
     private function metaAll(): void { $o = []; foreach (self::META_KEYS as $k) $o[$k] = $this->pod->getMeta($k); $this->json($o); }
     private function metaGet(string $k): void { $k = str_replace('~', '.', $k); $this->metaAllowed($k) ? $this->json(['key' => $k, 'value' => $this->pod->getMeta($k)]) : $this->json(['error' => 'Key not allowed'], 403); }
-    private const META_ADMIN_ONLY = ['site.url', 'workflow.review', 'format_version', 'build.webhook_url'];
+    private const META_ADMIN_ONLY = ['site.url', 'workflow.review', 'format_version', 'build.webhook_url', 'nav.links'];
     /** Non-admins must not change site-wide settings; preview URLs are admin-only and may only be http(s) or site-relative (they end up in an <a href>). */
+    /** nav.links = {"Gruppe": [{"label": "...", "url": "https://… oder /…"}]}; die Adressen landen in einem <a href>. */
+    private static function validNavLinks(mixed $v): bool
+    {
+        $d = is_string($v) ? json_decode($v, true) : $v;
+        if (!is_array($d)) return false;
+        foreach ($d as $group => $links) {
+            if (!is_string($group) || !is_array($links)) return false;
+            foreach ($links as $l) if (!is_array($l) || !is_string($l['label'] ?? null) || !is_string($l['url'] ?? null) || !preg_match('#^(https?://|/(?!/))#i', trim($l['url']))) return false;
+        }
+        return true;
+    }
     private function metaWritable(string $k, mixed $v): bool
     {
         $preview = str_starts_with($k, 'preview_url.');
         if (!$this->isAdmin() && ($preview || in_array($k, self::META_ADMIN_ONLY, true))) return false;
         if ($preview && $v !== null && $v !== '' && !preg_match('#^(https?://|/(?!/))#i', trim((string)$v))) return false;
+        if ($k === 'nav.links' && $v !== null && $v !== '' && !self::validNavLinks($v)) return false;   // Lander: Links der Seitenleiste, nur http(s) oder seitenrelativ
         if ($k === 'build.webhook_url' && $v !== null && $v !== '' && !Webhooks::validUrl(trim((string)$v))) return false;
         return true;
     }

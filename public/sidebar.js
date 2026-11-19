@@ -144,7 +144,8 @@
             var groupCols = colIds.map(function (id) {
               return topLevel.find(function (c) { return c.id === id; });
             }).filter(Boolean);
-            if (!groupCols.length) return;
+            var groupLinks = ((info.nav && info.nav.links) || {})[groupLabel] || [];   // Lander: externe Links in der Gruppe
+            if (!groupCols.length && !groupLinks.length) return;
             colIds.forEach(function (id) { groupedIds.add(id); });
 
             var groupWrap = document.createElement('div');
@@ -155,7 +156,7 @@
             groupWrap.classList.add('pinned');
             var header = document.createElement('div');
             header.className = 'nav-group-header open';
-            header.innerHTML = '<span class="nav-group-arrow">▶</span><span class="nav-group-label">' + groupLabel + '</span><span class="nav-group-count">' + groupCols.length + '</span>';
+            header.innerHTML = '<span class="nav-group-arrow">▶</span><span class="nav-group-label">' + groupLabel + '</span><span class="nav-group-count">' + (groupCols.length + groupLinks.length) + '</span>';
             header.addEventListener('click', function () {
               groupWrap.classList.toggle('pinned');
               header.classList.toggle('open', groupWrap.classList.contains('pinned'));
@@ -176,6 +177,13 @@
                 : '/entries.html?col=' + encodeURIComponent(col.id) + '&label=' + encodeURIComponent(col.label);
               a.innerHTML = '<span class="nav-icon">' + (isSingleton ? '◈' : '◦') + '</span><span class="nav-label">' + col.label + '</span>';
               body.appendChild(a);
+            });
+            groupLinks.forEach(function (l) {   // Lander: externe Links (neuer Tab)
+              if (!l || !/^(https?:\/\/|\/(?!\/))/i.test(String(l.url || ''))) return;
+              var a = document.createElement('a'); a.className = 'nav-item nav-child'; a.href = l.url; a.target = '_blank'; a.rel = 'noopener';
+              var ic = document.createElement('span'); ic.className = 'nav-icon'; ic.textContent = '↗';
+              var lb = document.createElement('span'); lb.className = 'nav-label'; lb.textContent = l.label || l.url;
+              a.appendChild(ic); a.appendChild(lb); body.appendChild(a);
             });
             groupWrap.appendChild(body);
             frag.appendChild(groupWrap);
