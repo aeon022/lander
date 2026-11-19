@@ -414,7 +414,7 @@ final class Api
         if (!is_array($d)) return false;
         foreach ($d as $group => $links) {
             if (!is_string($group) || !is_array($links)) return false;
-            foreach ($links as $l) if (!is_array($l) || !is_string($l['label'] ?? null) || !is_string($l['url'] ?? null) || !preg_match('#^(https?://|/(?!/))#i', trim($l['url']))) return false;
+            foreach ($links as $l) if (!is_array($l) || !is_string($l['label'] ?? null) || !is_string($l['url'] ?? null) || !preg_match('#^(https?://|/(?![/\\\\]))#i', trim($l['url']))) return false;
         }
         return true;
     }
