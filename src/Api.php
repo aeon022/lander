@@ -75,7 +75,7 @@ final class Api
         $r = $seg[0] ?? '';
 
         match (true) {
-            $r === 'auth' && ($seg[1] ?? '') === 'me' => $this->json(['user' => $this->user]),
+            $r === 'auth' && ($seg[1] ?? '') === 'me' => $this->json(['user' => $this->user, 'totp' => !empty(($this->pod->userByName($this->user['username']) ?? [])['totp_enabled'])]),
             $r === 'info' => $this->info(),
             $r === 'help' && $m === 'GET' => $this->help(),
             $r === 'meta' && $n === 1 && $m === 'GET' => $this->metaAll(),
