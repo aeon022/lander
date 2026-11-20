@@ -134,3 +134,8 @@
 ## 2026-11-19 — Links in der Seitenleiste (nav.links)
 - `nav.links` (Meta, nur Admin): `{"Gruppe": [{"label": "…", "url": "https://… oder /…"}]}`; erscheint als `↗`-Einträge (neuer Tab) in der gleichnamigen Gruppe aus `nav.groups`. `Api.php` prüft die Adressen (nur http(s) oder seitenrelativ), `/api/info` liefert `nav.links`, `sidebar.js` rendert (`Lander:`-Block). Noch nicht in Orbiter-Admin übernommen, nicht committet.
 - Getestet: weinbank-Lander (lokal 8096 + Test-Server): javascript:-Adresse wird verworfen, Links erscheinen, Headless-Chrome ohne JS-Fehler.
+
+## 2026-11-20 — Lander 0.7.9 (Oberfläche aus Orbiter 0.3.116)
+- Editor aus Orbiter übernommen (Markdown-Felder, Ansichten Editor | MD | HTML, Einfügen aus Word, Link-Auswahl, Alt-Text-Hinweise, Datei-Karten, CodeMirror/Vim-Quelltext mit `public/vendor/codemirror-md.js`, i18n-de-Einträge). Unterschied zu Orbiter weiter nur die bekannten 64 Zeilen (`Lander:`-Markierungen); Lander-Editor immer aus dem letzten Commit + Orbiter-Diff ableiten.
+- Release v0.7.9 (GitHub, Latest): `git archive` → ZIP, **ohne PHP per Node signiert** (`/tmp/sign.mjs`-Verfahren: Ed25519 über die ZIP-Bytes, Seed = erste 32 Byte des Schlüssels, Gegenprobe gegen `Updater::PUBLIC_KEY`), `.zip.sig` als Hex. Enthält auch 0.7.6–0.7.8, die nie als Release erschienen waren.
+- Nicht im Browser getestet (kein Docker/PHP lokal).
